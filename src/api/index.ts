@@ -2,23 +2,31 @@ import express, { Router } from 'express';
 import AEError, { sendError } from '../errors';
 import task_route from './tasks/index';
 import jwt from 'express-jwt';
-import { SECRET_SIGNER_JWT } from '../constants';
+import { SECRET_PUBLIC_KEY } from '../constants';
+import { JSONWebToken } from '../interfaces';
+import { isTokenInvalid } from '../helpers';
 
 const route = Router();
 
 // Declare jwt use
 route.use(
-    jwt(
-        { secret: SECRET_SIGNER_JWT, credentialsRequired: true }
-    ).unless(
-        { path: ["/users/request.json"] }
+    jwt({ 
+        secret: SECRET_PUBLIC_KEY, 
+        credentialsRequired: true,
+        isRevoked: (_, payload, done) => {
+            isTokenInvalid(payload.jti)
+                .then(is_revoked => { done(null, is_revoked); })
+                .catch(e => { done(e); });
+        }
+    }).unless(
+        { path: ["/users/request.json", "/users/access.json"] }
     )
 );
 
 // Extends Express request
 declare module 'express-serve-static-core' {
     interface Request {
-      user?: string
+      user?: JSONWebToken
     }
     // interface Response {
     //   myField?: string

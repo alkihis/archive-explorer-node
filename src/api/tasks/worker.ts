@@ -67,7 +67,7 @@ async function startTask(credentials: TwitterCredentials, ids: string[]) {
             }
 
             promises.push(
-                user.post('statuses/destroy/' + id + '.json')
+                user.post('statuses/destroy/' + id)
                     .then(done_pp_fn)
                     .catch(failed_pp_fn)
             );
