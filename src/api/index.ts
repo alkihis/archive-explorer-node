@@ -6,6 +6,7 @@ import { SECRET_SIGNER_JWT } from '../constants';
 
 const route = Router();
 
+// Declare jwt use
 route.use(
     jwt(
         { secret: SECRET_SIGNER_JWT, credentialsRequired: true }
@@ -13,6 +14,16 @@ route.use(
         { path: ["/users/request.json"] }
     )
 );
+
+// Extends Express request
+declare module 'express-serve-static-core' {
+    interface Request {
+      user?: string
+    }
+    // interface Response {
+    //   myField?: string
+    // }
+}
 
 route.use('/tasks', task_route);
 
