@@ -26,7 +26,16 @@ export function invalidateTokensFromUser(user_id: string) {
 
 export function isTokenInvalid(token: string) {
     return getUserFromToken(token)
-        .then(model => model === null)
+        .then(model => {
+            if (model) {
+                // Actualise le last_use
+                model.last_use = new Date;
+                model.save();
+
+                return false;
+            }
+            return true;
+        })
         .catch(() => true);
 }
 

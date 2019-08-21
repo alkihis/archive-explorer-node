@@ -80,7 +80,8 @@ route.post('/', (req, res) => {
             new TokenModel({
                 token: uniq_id,
                 user_id: t_user.id_str,
-                date: new Date
+                date: new Date,
+                last_use: new Date
             });
 
             if (user === null) {
