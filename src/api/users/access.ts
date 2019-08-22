@@ -5,13 +5,14 @@ import AEError, { sendError } from "../../errors";
 import { getCompleteUserFromTwitterId, signToken } from "../../helpers";
 import { IUser, UserModel, TokenModel } from "../../models";
 import { FullUser as TwitterUser } from 'twitter-d';
-import uuid = require("uuid");
+import uuid from "uuid";
 
 // Meant to be called when oauth callback is done
 const route = Router();
 
 route.post('/', (req, res) => {
     if (
+        req.body && 
         req.body.oauth_token && 
         req.body.oauth_token_secret && 
         req.body.oauth_verifier
@@ -69,20 +70,23 @@ route.post('/', (req, res) => {
                 token = await signToken({ 
                     user_id: t_user.id_str, 
                     screen_name: t_user.screen_name,
-                    login_ip: req.connection.remoteAddress
+                    login_ip: req.connection.remoteAddress!
                 }, uniq_id);
             } catch (e) {
+                console.log("Token", e);
                 sendError(AEError.server_error, res);
                 return;
             }
 
             // Puis on enregistre le token en BDD !
-            new TokenModel({
+            const token_model = new TokenModel({
                 token: uniq_id,
                 user_id: t_user.id_str,
                 date: new Date,
-                last_use: new Date
+                last_use: new Date,
+                login_ip: req.connection.remoteAddress
             });
+            token_model.save();
 
             if (user === null) {
                 // Création
@@ -97,6 +101,7 @@ route.post('/', (req, res) => {
                     user_id: t_user.id_str,
                     last_login: new Date,
                 });
+                user.save();
             }
             else {
                 // Mise à jour de l'utilisateur avec les nouvelles données
@@ -114,7 +119,8 @@ route.post('/', (req, res) => {
                 status: true,
                 token
             });
-        })().catch(() => {
+        })().catch((e) => {
+            console.error(e)
             sendError(AEError.server_error, res);
         });
     }

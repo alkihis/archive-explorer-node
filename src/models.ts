@@ -24,12 +24,14 @@ const user_schema = new mongoose.Schema({
 export interface IToken extends mongoose.Document {
     user_id: string,
     token: string,
+    login_ip: string,
     date: Date,
     last_use: Date
 } 
 const token_schema = new mongoose.Schema({
     user_id: String,
     token: String,
+    login_ip: String,
     date: Date,
     last_use: Date
 });

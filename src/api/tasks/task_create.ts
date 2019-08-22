@@ -9,7 +9,7 @@ route.post('/', (req, res) => {
     const user_id = "";
     
     // Tweets IDs are in req.body.tweets, splitted by comma
-    if (req.body.tweets && typeof req.body.tweets === 'string') {
+    if (req.body && req.body.tweets && typeof req.body.tweets === 'string') {
         const tweets = (req.body.tweets as string).split(',');
 
         if (tweets.length) {

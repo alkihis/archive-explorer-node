@@ -1,10 +1,13 @@
 import express, { Router } from 'express';
 import AEError, { sendError } from '../errors';
 import task_route from './tasks/index';
+import users_route from './users/index';
+import callback_twitter from './users/callback_twitter';
 import jwt from 'express-jwt';
 import { SECRET_PUBLIC_KEY } from '../constants';
 import { JSONWebToken } from '../interfaces';
 import { isTokenInvalid } from '../helpers';
+import bodyParser from 'body-parser';
 
 const route = Router();
 
@@ -13,13 +16,13 @@ route.use(
     jwt({ 
         secret: SECRET_PUBLIC_KEY, 
         credentialsRequired: true,
-        isRevoked: (_, payload, done) => {
-            isTokenInvalid(payload.jti)
+        isRevoked: (res, payload, done) => {
+            isTokenInvalid(payload.jti, res)
                 .then(is_revoked => { done(null, is_revoked); })
                 .catch(e => { done(e); });
         }
     }).unless(
-        { path: ["/users/request.json", "/users/access.json"] }
+        { path: ["/api/users/request.json", "/api/users/access.json", "/api/callback_twitter"] }
     )
 );
 
@@ -33,7 +36,17 @@ declare module 'express-serve-static-core' {
     // }
 }
 
+// parse application/x-www-form-urlencoded
+route.use(bodyParser.urlencoded({ extended: true }));
+
+// parse application/json
+route.use(bodyParser.json());
+
 route.use('/tasks', task_route);
+route.use('/users', users_route);
+
+// DEBUG
+route.use('/callback_twitter', callback_twitter);
 
 route.all('/', (_, res) => {
     sendError(AEError.invalid_route, res);

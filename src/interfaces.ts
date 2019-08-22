@@ -1,7 +1,6 @@
-export interface JSONWebToken {
-    user_id: string;
-    screen_name: string;
-    login_ip: string;
+import { TokenPayload } from "./helpers";
+
+export interface JSONWebTokenPartial {
     /** Issued at */
     iat: string;
     /** Expiration (timestamp) */
@@ -9,3 +8,5 @@ export interface JSONWebToken {
     /** Issuer */
     iss: string;
 }
+
+export type JSONWebToken = JSONWebTokenPartial & TokenPayload;

@@ -1,11 +1,16 @@
 import { UserModel, TokenModel, IUser } from "./models";
-import { SECRET_PRIVATE_KEY } from "./constants";
+import { SECRET_PRIVATE_KEY, SECRET_PASSPHRASE } from "./constants";
 import jsonwebtoken from 'jsonwebtoken';
 import twitterLite from "twitter-lite";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "./twitter_const";
+import express from 'express';
 
 export function getUserFromToken(token: string) {
     return TokenModel.findOne({ token });
+}
+
+export function getTokensFromUser(user_id: string) {
+    return TokenModel.find({ user_id });
 }
 
 export function getCompleteUserFromId(user_id: string) {
@@ -24,12 +29,15 @@ export function invalidateTokensFromUser(user_id: string) {
     return TokenModel.remove({ user_id });
 }
 
-export function isTokenInvalid(token: string) {
+export function isTokenInvalid(token: string, res?: express.Request) {
     return getUserFromToken(token)
         .then(model => {
             if (model) {
                 // Actualise le last_use
                 model.last_use = new Date;
+                if (res) {
+                    model.login_ip = res.connection.remoteAddress!;
+                }
                 model.save();
 
                 return false;
@@ -44,18 +52,25 @@ export function removeUser(user: IUser) {
     return user.remove();
 }
 
-export function signToken(payload: any, id: string) {
+export interface TokenPayload {
+    user_id: string, 
+    screen_name: string,
+    login_ip: string
+}
+
+export function signToken(payload: TokenPayload, id: string) {
     return new Promise((resolve, reject) => {
+        // Signe le token
         jsonwebtoken.sign(
-            payload, 
-            SECRET_PRIVATE_KEY, 
+            payload, // Données custom
+            { key: SECRET_PRIVATE_KEY, passphrase: SECRET_PASSPHRASE }, // Clé RSA privée
             { 
                 algorithm: 'RS256', 
-                expiresIn: "365d", 
+                expiresIn: "365d", // 1 an de durabilité
                 issuer: "Archive Explorer Server 1", 
-                jwtid: id
+                jwtid: id, // ID généré avec uuid
             }, 
-            (err, encoded) => {
+            (err, encoded) => { // Quand le token est généré (ou non), accepte/rejette la promesse
                 if (err) reject(err);
                 else resolve(encoded);
             }

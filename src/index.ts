@@ -8,6 +8,8 @@ import socket_io from 'socket.io';
 import http_base from 'http';
 import { startIo } from './api/tasks/task_server';
 import mongoose from 'mongoose';
+import { signToken } from './helpers';
+import { TokenModel } from './models';
 
 // archive-explorer-server main file
 // Meant to serve archive-explorer website, 
@@ -15,7 +17,7 @@ import mongoose from 'mongoose';
 
 commander
     .version(VERSION)
-    .option('-p, --port <port>', 'Server port', Number, 3120)
+    .option('-p, --port <port>', 'Server port', Number, 3128)
     .option('-l, --log-level [logLevel]', 'Log level [debug|verbose|info|warn|error]', /^(debug|verbose|info|warn|error)$/, 'info')
 .parse(process.argv);
 
@@ -29,7 +31,7 @@ const http = http_base.createServer(app);
 const io = socket_io(http);
 export default io;
 
-mongoose.connect('mongodb://localhost:3281', { useNewUrlParser: true });
+mongoose.connect('mongodb://localhost:3281/ae', { useNewUrlParser: true });
 
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));

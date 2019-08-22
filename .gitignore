@@ -2,3 +2,4 @@ node_modules
 .ssh
 build
 twitter_const.ts
+misc
