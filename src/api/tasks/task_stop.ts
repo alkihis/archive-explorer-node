@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { tasks_to_objects, users_to_tasks } from './Task';
 import AEError, { sendError } from '../../errors';
+import { methodNotAllowed } from '../../helpers';
 
 const route = Router();
 
@@ -28,6 +29,8 @@ route.get('/all.json', (_, res) => {
 
     res.send();
 });
+
+route.all('/all.json', methodNotAllowed('GET'));
 
 // Arrêter une tâche par ID
 route.post('/:id.json', (req, res) => {
@@ -63,5 +66,7 @@ route.post('/:id.json', (req, res) => {
         sendError(AEError.invalid_data, res);
     }
 });
+
+route.all('/:id.json', methodNotAllowed('POST'));
 
 export default route;

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { invalidateToken } from "../../helpers";
+import { invalidateToken, methodNotAllowed } from "../../helpers";
 import logger from "../../logger";
 import AEError, { sendError } from "../../errors";
 
@@ -28,5 +28,7 @@ route.post('/', (req, res) => {
             sendError(AEError.server_error, res);
         });
 });
+
+route.all('/', methodNotAllowed('POST'));
 
 export default route;

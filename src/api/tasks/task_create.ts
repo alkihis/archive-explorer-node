@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import AEError, { sendError } from '../../errors';
 import Task from './Task';
+import { methodNotAllowed } from '../../helpers';
 
 const route = Router();
 
@@ -26,5 +27,7 @@ route.post('/', (req, res) => {
         sendError(AEError.invalid_data, res);
     }
 });
+
+route.all('/', methodNotAllowed('POST'));
 
 export default route;

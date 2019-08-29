@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getTokensFromUser, sanitizeMongoObj } from "../../helpers";
+import { getTokensFromUser, sanitizeMongoObj, methodNotAllowed } from "../../helpers";
 import logger from "../../logger";
 import AEError, { sendError } from "../../errors";
 
@@ -18,5 +18,7 @@ route.get('/', (req, res) => {
             sendError(AEError.server_error, res);
         });
 });
+
+route.all('/', methodNotAllowed('GET'));
 
 export default route;

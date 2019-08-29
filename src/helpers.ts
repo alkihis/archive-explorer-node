@@ -5,6 +5,14 @@ import twitterLite from "twitter-lite";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "./twitter_const";
 import express from 'express';
 import Mongoose from "mongoose";
+import AEError, { sendError } from "./errors";
+
+export function methodNotAllowed(allow: string | string[]) {
+    return (_: any, res: express.Response) => {
+        res.setHeader('Allow', typeof allow === 'string' ? allow : allow.join(', '));
+        sendError(AEError.invalid_method, res);
+    };
+}
 
 export function sanitizeMongoObj<T extends Mongoose.Document>(data: T) : any {
     const original_clean = data.toJSON();

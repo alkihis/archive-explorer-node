@@ -4,7 +4,7 @@ import { Response } from "express";
 // A code will be automatically given (numeric order, the first is 1).
 enum AEError {
     inexistant = 1, invalid_route, server_error, invalid_data, invalid_request,
-    forbidden, invalid_token, invalid_verifier
+    forbidden, invalid_token, invalid_verifier, invalid_method,
 };
 
 // Specify here the corresponding error message and HTTP code for the error
@@ -17,6 +17,7 @@ const errors: { [errorCode: string]: [string, number] } = {
     [AEError.forbidden]: ["Your current credentials does not allow you to access requested document or endpoint", 403],
     [AEError.invalid_token]: ["Invalid or inexistant token, that is required to access this resource", 403],
     [AEError.invalid_verifier]: ["OAuth verifier is invalid, please renew your request with valid credentials", 400],
+    [AEError.invalid_method]: ["Invalid HTTP method", 405],
 };
 
 export default AEError;

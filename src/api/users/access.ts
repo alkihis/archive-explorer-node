@@ -2,7 +2,7 @@ import { Router } from "express";
 import twitter from 'twitter-lite';
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
 import AEError, { sendError } from "../../errors";
-import { getCompleteUserFromTwitterId, signToken } from "../../helpers";
+import { getCompleteUserFromTwitterId, signToken, methodNotAllowed } from "../../helpers";
 import { IUser, UserModel, TokenModel } from "../../models";
 import { FullUser as TwitterUser } from 'twitter-d';
 import uuid from "uuid";
@@ -128,5 +128,7 @@ route.post('/', (req, res) => {
         sendError(AEError.invalid_data, res);
     }
 });
+
+route.all('/', methodNotAllowed('POST'));
 
 export default route;

@@ -2,6 +2,7 @@ import { Router } from "express";
 import twitter from 'twitter-lite';
 import { CONSUMER_KEY, CONSUMER_SECRET, CALLBACK_URL } from "../../twitter_const";
 import AEError, { sendError } from "../../errors";
+import { methodNotAllowed } from "../../helpers";
 
 // Ask a request token
 
@@ -26,5 +27,7 @@ route.post('/', (_, res) => {
         sendError(AEError.server_error, res);
     });
 });
+
+route.all('/', methodNotAllowed('POST'));
 
 export default route;

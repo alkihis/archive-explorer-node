@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import AEError, { sendError } from '../../errors';
 import { tasks_to_objects, users_to_tasks } from './Task';
-import { getUserFromToken } from '../../helpers';
+import { getUserFromToken, methodNotAllowed } from '../../helpers';
 
 const route = Router();
 
@@ -35,5 +35,7 @@ route.get('/:id.json', (req, res) => {
         sendError(AEError.invalid_request, res);
     }
 });
+
+route.all('/', methodNotAllowed('GET'));
 
 export default route;
