@@ -8,8 +8,7 @@ import socket_io from 'socket.io';
 import http_base from 'http';
 import { startIo } from './api/tasks/task_server';
 import mongoose from 'mongoose';
-import { signToken } from './helpers';
-import { TokenModel } from './models';
+import cors from 'cors';
 
 // archive-explorer-server main file
 // Meant to serve archive-explorer website, 
@@ -26,6 +25,9 @@ if (commander.logLevel) {
 }
 
 const app = express();
+
+/// DEBUG ONLY
+app.use(cors());
 
 const http = http_base.createServer(app);
 const io = socket_io(http);

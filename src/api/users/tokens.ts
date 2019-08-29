@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getTokensFromUser } from "../../helpers";
+import { getTokensFromUser, sanitizeMongoObj } from "../../helpers";
 import logger from "../../logger";
 import AEError, { sendError } from "../../errors";
 
@@ -11,7 +11,7 @@ route.get('/', (req, res) => {
 
     tokens
         .then(u => {
-            res.json(u);
+            res.json(u.map(e => sanitizeMongoObj(e)));
         })
         .catch(e => {
             logger.error("Error while fetching tokens:", e);

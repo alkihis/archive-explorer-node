@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getCompleteUserFromId } from "../../helpers";
+import { getCompleteUserFromId, sanitizeMongoObj } from "../../helpers";
 import logger from "../../logger";
 import AEError, { sendError } from "../../errors";
 
@@ -12,7 +12,7 @@ route.get('/', (req, res) => {
     user
         .then(u => {
             if (u) {
-                res.json(u);
+                res.json(sanitizeMongoObj(u));
             }
             else {
                 sendError(AEError.forbidden, res);

@@ -42,6 +42,14 @@ route.use(bodyParser.urlencoded({ extended: true }));
 // parse application/json
 route.use(bodyParser.json());
 
+// Pas de type system (vieux paquet)
+const mongoSanitize = require('express-mongo-sanitize');
+
+// Or, to replace prohibited characters with _, use:
+route.use(mongoSanitize({
+    replaceWith: '_'
+}));
+
 route.use('/tasks', task_route);
 route.use('/users', users_route);
 

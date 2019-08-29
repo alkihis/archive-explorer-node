@@ -19,7 +19,7 @@ route.post('/', (_, res) => {
         res.json({
             oauth_token: data.oauth_token,
             oauth_token_secret: data.oauth_token_secret,
-            url: 'https://api.twitter.com/oauth/authorize?oauth_token=' + data.oauth_token
+            url: 'https://api.twitter.com/oauth/authenticate?oauth_token=' + data.oauth_token
         });
     })
     .catch(() => {

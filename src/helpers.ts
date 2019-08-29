@@ -4,6 +4,19 @@ import jsonwebtoken from 'jsonwebtoken';
 import twitterLite from "twitter-lite";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "./twitter_const";
 import express from 'express';
+import Mongoose from "mongoose";
+
+export function sanitizeMongoObj<T extends Mongoose.Document>(data: T) : any {
+    const original_clean = data.toJSON();
+
+    for (const prop in original_clean) {
+        if (prop.startsWith('_')) {
+            delete original_clean[prop];
+        }
+    }
+
+    return original_clean;
+}
 
 export function getUserFromToken(token: string) {
     return TokenModel.findOne({ token });
