@@ -4,7 +4,7 @@ import { Response } from "express";
 // A code will be automatically given (numeric order, the first is 1).
 enum AEError {
     inexistant = 1, invalid_route, server_error, invalid_data, invalid_request,
-    forbidden, invalid_token, invalid_verifier, invalid_method,
+    forbidden, invalid_token, invalid_verifier, invalid_method, twitter_error,
 };
 
 // Specify here the corresponding error message and HTTP code for the error
@@ -18,15 +18,18 @@ const errors: { [errorCode: string]: [string, number] } = {
     [AEError.invalid_token]: ["Invalid or inexistant token, that is required to access this resource", 403],
     [AEError.invalid_verifier]: ["OAuth verifier is invalid, please renew your request with valid credentials", 400],
     [AEError.invalid_method]: ["Invalid HTTP method", 405],
+    [AEError.twitter_error]: ["Twitter error. See .error for explicit details", 400],
 };
 
 export default AEError;
 
-export function sendError(code: AEError, res: Response) {
+export function sendError(code: AEError, res: Response, custom_error?: any) {
     if (String(code) in errors) {
-        res.status(errors[code][1]).json({
+        const e = {
             code, message: errors[code][0]
-        });
+        };
+
+        res.status(errors[code][1]).json(custom_error ? {...e, error: custom_error} : e);
     }
     else {
         sendError(AEError.server_error, res);

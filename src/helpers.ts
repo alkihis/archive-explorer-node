@@ -1,4 +1,4 @@
-import { UserModel, TokenModel, IUser } from "./models";
+import { UserModel, TokenModel, IUser, TweetModel, ITweet, TwitterUserModel, ITwitterUser } from "./models";
 import { SECRET_PRIVATE_KEY, SECRET_PASSPHRASE } from "./constants";
 import jsonwebtoken from 'jsonwebtoken';
 import twitterLite from "twitter-lite";
@@ -6,6 +6,8 @@ import { CONSUMER_KEY, CONSUMER_SECRET } from "./twitter_const";
 import express from 'express';
 import Mongoose from "mongoose";
 import AEError, { sendError } from "./errors";
+import { Status, FullUser } from "twitter-d";
+import { TokenPayload } from "./interfaces";
 
 export function methodNotAllowed(allow: string | string[]) {
     return (_: any, res: express.Response) => {
@@ -42,6 +44,72 @@ export function getCompleteUserFromTwitterId(twitter_id: string) {
     return UserModel.findOne({ twitter_id });
 }
 
+export function batchTweets(ids: string[]) {
+    return TweetModel.find({ id_str: { $in: ids } })
+        .then((statuses: ITweet[]) => {
+            const obsoletes: ITweet[] = [];
+            const current_date_minus = new Date;
+            current_date_minus.setMonth(current_date_minus.getMonth() - 3);
+
+            // Check the tweets that are obsoletes
+            statuses = statuses.filter(e => {
+                // Check if moins de 3 mois
+                if (e.inserted_time.getTime() < current_date_minus.getTime()) {
+                    obsoletes.push(e);
+                    return false;
+                }
+                return true;
+            })
+
+            // Delete obsoletes tweets
+            TweetModel.deleteMany({ id: { $in: obsoletes.map(e => e.id_str) } });
+
+            // Return valids
+            return statuses;
+        });
+}
+
+export function batchUsers(ids: string[]) {
+    return TwitterUserModel.find({ id_str: { $in: ids } })
+        .then((users: ITwitterUser[]) => {
+            const obsoletes: ITwitterUser[] = [];
+            const current_date_minus = new Date;
+            current_date_minus.setMonth(current_date_minus.getMonth() - 3);
+
+            // Check the tweets that are obsoletes
+            users = users.filter(e => {
+                // Check if moins de 3 mois
+                if (e.inserted_time.getTime() < current_date_minus.getTime()) {
+                    obsoletes.push(e);
+                    return false;
+                }
+                return true;
+            })
+
+            // Delete obsoletes tweets
+            TwitterUserModel.deleteMany({ id: { $in: obsoletes.map(e => e.id_str) } });
+
+            // Return valids
+            return users;
+        });
+}
+
+export function saveTweets(tweets: Status[]) {
+    return TweetModel.insertMany(
+        tweets
+            .map(e => suppressUselessTweetProperties(e))
+            .map(t => { return {...t, inserted_time: new Date}; })
+    );
+}
+
+export function saveTwitterUsers(users: FullUser[]) {
+    return TwitterUserModel.insertMany(
+        users
+            .map(u => suppressUselessTUserProperties(u))
+            .map(u => { return {...u, inserted_time: new Date}; })
+    );
+}
+
 export function invalidateToken(token: string) {
     return TokenModel.remove({ token });
 }
@@ -73,12 +141,6 @@ export function removeUser(user: IUser) {
     return user.remove();
 }
 
-export interface TokenPayload {
-    user_id: string, 
-    screen_name: string,
-    login_ip: string
-}
-
 export function signToken(payload: TokenPayload, id: string) {
     return new Promise((resolve, reject) => {
         // Signe le token
@@ -107,3 +169,38 @@ export function createTwitterObjectFromUser(user: IUser) {
         access_token_secret: user.oauth_token_secret
     });
 }
+
+export function suppressUselessTweetProperties(tweet: Status) {
+    delete tweet.contributors;
+    delete tweet.coordinates;
+    delete tweet.current_user_retweet;
+    delete tweet.favorited;
+    delete tweet.place;
+    delete tweet.retweeted;
+    delete tweet.scopes;
+    delete tweet.withheld_copyright;
+    delete tweet.withheld_in_countries;
+    delete tweet.withheld_scope;
+
+    if (tweet.quoted_status) {
+        tweet.quoted_status = suppressUselessTweetProperties(tweet.quoted_status);
+    }
+    if (tweet.retweeted_status) {
+        tweet.retweeted_status = suppressUselessTweetProperties(tweet.retweeted_status);
+    }
+
+    tweet.user = suppressUselessTUserProperties(tweet.user as FullUser);
+
+    return tweet;
+}
+
+export function suppressUselessTUserProperties(user: FullUser) {
+    delete user.entities;
+    delete user.listed_count;
+    delete user.status;
+    delete user.withheld_in_countries;
+    delete user.withheld_scope;
+    delete user.statuses_count;
+
+    return user;
+} 

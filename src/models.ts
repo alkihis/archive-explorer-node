@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { Status, FullUser } from 'twitter-d';
 
 export interface IUser extends mongoose.Document {
     oauth_token: string,
@@ -36,6 +37,26 @@ const token_schema = new mongoose.Schema({
     last_use: Date
 });
 
+export type ITweetPartial = mongoose.Document & Status;
+
+export interface ITweet extends ITweetPartial {
+    inserted_time: Date;
+}
+
+const tweet_schema = new mongoose.Schema({}, { strict: false });
+
+export type IUserPartial = mongoose.Document & FullUser;
+
+export interface ITwitterUser extends IUserPartial {
+    inserted_time: Date;
+}
+
+const user_twitter_schema = new mongoose.Schema({}, { strict: false });
+
 export const UserModel = mongoose.model<IUser>('UserModel', user_schema, 'ae_user'); 
 
 export const TokenModel = mongoose.model<IToken>('TokenModel', token_schema, 'ae_token'); 
+
+export const TweetModel = mongoose.model<ITweet>('TweetModel', tweet_schema, 'ae_tweets'); 
+
+export const TwitterUserModel = mongoose.model<ITwitterUser>('TwitterUserModel', user_twitter_schema, 'ae_twitter_users'); 
