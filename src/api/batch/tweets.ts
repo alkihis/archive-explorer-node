@@ -51,7 +51,11 @@ route.post('/', (req, res) => {
         });
 
         // Batch tweets using lookup endpoint (100 max)
-        const twitter_tweets = await user.post('statuses/lookup', { id: to_retrieve.join(','), include_entities: true })
+        const twitter_tweets = await user.post('statuses/lookup', { 
+          id: to_retrieve.join(','), 
+          include_entities: true, 
+          tweet_mode: "extended" 
+        })
           // Save every tweet in mangoose (and catch insert errors)
           .then((statuses: Status[]) => saveTweets(statuses).catch(() => sendError(AEError.server_error, res)))
           // Otherwise, send Twitter error
