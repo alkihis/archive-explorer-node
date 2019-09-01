@@ -43,7 +43,11 @@ export interface ITweet extends ITweetPartial {
     inserted_time: Date;
 }
 
-const tweet_schema = new mongoose.Schema({}, { strict: false });
+const tweet_schema = new mongoose.Schema({
+    id_str: String,
+    inserted_time: Date,
+    user: {}
+}, { strict: false });
 
 export type IUserPartial = mongoose.Document & FullUser;
 
@@ -51,7 +55,10 @@ export interface ITwitterUser extends IUserPartial {
     inserted_time: Date;
 }
 
-const user_twitter_schema = new mongoose.Schema({}, { strict: false });
+const user_twitter_schema = new mongoose.Schema({
+    id_str: String,
+    inserted_time: Date,
+}, { strict: false });
 
 export const UserModel = mongoose.model<IUser>('UserModel', user_schema, 'ae_user'); 
 

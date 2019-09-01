@@ -2,6 +2,7 @@ import express, { Router } from 'express';
 import AEError, { sendError } from '../errors';
 import task_route from './tasks/index';
 import users_route from './users/index';
+import batch_route from './batch/index';
 import callback_twitter from './users/callback_twitter';
 import jwt from 'express-jwt';
 import { SECRET_PUBLIC_KEY } from '../constants';
@@ -50,8 +51,10 @@ route.use(mongoSanitize({
     replaceWith: '_'
 }));
 
+// Defining routers
 route.use('/tasks', task_route);
 route.use('/users', users_route);
+route.use('/batch', batch_route);
 
 // DEBUG
 route.use('/callback_twitter', callback_twitter);

@@ -201,6 +201,38 @@ export function suppressUselessTUserProperties(user: FullUser) {
     delete user.withheld_in_countries;
     delete user.withheld_scope;
     delete user.statuses_count;
+    // @ts-ignore
+    delete user.follow_request_sent;
+    delete user.default_profile_image;
+    delete user.default_profile;
+    // @ts-ignore
+    delete user.profile_background_image_url;
+    // @ts-ignore
+    delete user.profile_background_image_url_https;
+    // @ts-ignore
+    delete user.profile_background_tile;
+    // @ts-ignore
+    delete user.profile_background_color;
+    // @ts-ignore
+    delete user.geo_enabled;
+    // @ts-ignore
+    delete user.utc_offset;
+    // @ts-ignore
+    delete user.time_zone;
+    // @ts-ignore
+    delete user.contributors_enabled;
+    // @ts-ignore
+    delete user.is_translator;
+    // @ts-ignore
+    delete user.is_translation_enabled;
+    // @ts-ignore
+    delete user.profile_use_background_image;
+    // @ts-ignore
+    delete user.has_extended_profile;
+    // @ts-ignore
+    delete user.notifications;
+    // @ts-ignore
+    delete user.translator_type;
 
     return user;
 } 
