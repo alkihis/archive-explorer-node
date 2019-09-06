@@ -75,7 +75,7 @@ route.post('/', (req, res) => {
       // Send response
       res.json(existings.map(e => sanitizeMongoObj(e)));
     })().catch(e => {
-      console.log("Batch error", e);
+      logger.error("Batch error", e);
       sendError(AEError.server_error, res);
     });
   }

@@ -33,9 +33,6 @@ declare module 'express-serve-static-core' {
     interface Request {
       user?: JSONWebToken
     }
-    // interface Response {
-    //   myField?: string
-    // }
 }
 
 // parse application/x-www-form-urlencoded
@@ -58,7 +55,7 @@ route.use('/users', users_route);
 route.use('/batch', batch_route);
 
 // DEBUG
-route.use('/callback_twitter', callback_twitter);
+// route.use('/callback_twitter', callback_twitter);
 
 route.all('/', (_, res) => {
     sendError(AEError.invalid_route, res);

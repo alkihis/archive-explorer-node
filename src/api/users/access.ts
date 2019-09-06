@@ -6,6 +6,7 @@ import { getCompleteUserFromTwitterId, signToken, methodNotAllowed } from "../..
 import { IUser, UserModel, TokenModel } from "../../models";
 import { FullUser as TwitterUser } from 'twitter-d';
 import uuid from "uuid";
+import logger from "../../logger";
 
 // Meant to be called when oauth callback is done
 const route = Router();
@@ -73,7 +74,7 @@ route.post('/', (req, res) => {
                     login_ip: req.connection.remoteAddress!
                 }, uniq_id);
             } catch (e) {
-                console.log("Token", e);
+                logger.error("Unable to sign token", e);
                 sendError(AEError.server_error, res);
                 return;
             }
@@ -120,7 +121,7 @@ route.post('/', (req, res) => {
                 token
             });
         })().catch((e) => {
-            console.error(e)
+            logger.error("Uncaught error when trying to generate access token", e);
             sendError(AEError.server_error, res);
         });
     }
