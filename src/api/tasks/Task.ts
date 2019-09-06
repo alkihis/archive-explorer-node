@@ -1,5 +1,7 @@
 import { Socket } from "socket.io";
 import { Worker } from 'worker_threads';
+import logger from "../../logger";
+import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
 
 export interface TaskProgression {
     percentage: number;
@@ -34,6 +36,12 @@ interface TwitterCredentials {
     oauth_token_secret: string;
 }
 
+interface Credentials {
+    user_id: string;
+    oauth_token: string;
+    oauth_token_secret: string;
+}
+
 // Key is task ID
 export const tasks_to_objects: Map<BigInt, Task> = new Map;
 
@@ -56,12 +64,14 @@ export default class Task {
 
     constructor(
         tweets_id: string[],
-        protected user_id: string
+        protected user: Credentials
     ) { 
         // Auto increment internal ID
         const c = Task.current_id;
         Task.current_id++;
         this.id = c;
+
+        logger.verbose(`Starting task ${c} with ${tweets_id.length} tweets to delete`);
 
         this.last = {
             id: String(this.id),
@@ -78,23 +88,30 @@ export default class Task {
         tasks_to_objects.set(this.id, this);
 
         // Register to user to tasks
-        if (!users_to_tasks.has(this.user_id)) {
-            users_to_tasks.set(this.user_id, new Set);
+        if (!users_to_tasks.has(this.user.user_id)) {
+            users_to_tasks.set(this.user.user_id, new Set);
         }
 
-        users_to_tasks.get(this.user_id)!.add(this.id);
+        users_to_tasks.get(this.user.user_id)!.add(this.id);
 
         // Spawn worker thread(s)...
         // Pour le moment, il n'y en a qu'un seul de lancé
-        const worker = new Worker('worker.js');
+        const worker = new Worker(__dirname + '/worker.js');
         const task_to_worker: WorkerTask = {
             tweets: tweets_id,
-            credentials: { consumer_secret: "", consumer_token: "", oauth_token: "", oauth_token_secret: "" },
+            credentials: { 
+                consumer_token: CONSUMER_KEY, 
+                consumer_secret: CONSUMER_SECRET, 
+                oauth_token: this.user.oauth_token, 
+                oauth_token_secret: this.user.oauth_token_secret
+            },
             type: "task"
         };
 
         // Assignation des listeners
         worker.on('message', (data: WorkerMessage) => {
+            logger.verbose("Recieved message from worker:", data);
+
             if (data.type === "info") {
                 // Envoi d'un message de progression de la suppression
                 this.done += data.info!.done;
@@ -108,6 +125,8 @@ export default class Task {
             }
             else if (data.type === "error") {
                 this.emitError(data.error);
+                // Termine le worker
+                this.end(false);
             }
         });
 
@@ -121,6 +140,7 @@ export default class Task {
 
     subscribe(socket: Socket) {
         this.sockets.add(socket);
+        socket.emit('progression', this.last);
     }
 
     unsubscribe(socket: Socket) {
@@ -132,6 +152,7 @@ export default class Task {
     }
 
     cancel() {
+        logger.debug("Canceling task", this.id);
         this.sendMessageToSockets('task cancel', {
             id: String(this.id)
         });
@@ -151,6 +172,7 @@ export default class Task {
             });
         }
 
+        logger.debug("Terminating workers");
         // Send stop message to workers then terminate
         for (const worker of this.pool) {
             worker.postMessage({ type: 'stop' });
@@ -165,14 +187,16 @@ export default class Task {
         // Unregister task from Maps
         tasks_to_objects.delete(this.id);
 
-        const tasks = users_to_tasks.get(this.user_id);
+        const tasks = users_to_tasks.get(this.user.user_id);
         if (tasks) {
             tasks.delete(this.id);
 
             if (!tasks.size) {
-                users_to_tasks.delete(this.user_id);
+                users_to_tasks.delete(this.user.user_id);
             }
         }
+
+        logger.verbose(`Task ${this.id} has ended`);
     }
 
     get current_progression() {
@@ -180,7 +204,7 @@ export default class Task {
     }
 
     get owner() {
-        return this.user_id;
+        return this.user.user_id;
     }
 
     protected emit(progression: TaskProgression) {
@@ -189,6 +213,8 @@ export default class Task {
     }
 
     protected sendMessageToSockets(name: string, message: any) {
+        logger.debug(`Sending message ${name} to all sockets for task ${this.id}`, message);
+
         for (const s of this.sockets) {
             s.emit(name, message);
         }
@@ -198,7 +224,7 @@ export default class Task {
         const total = done + remaining + failed;
 
         this.emit({
-            done, remaining, id: String(this.id), failed, total, percentage: (done / total) * 100
+            done, remaining, id: String(this.id), failed, total, percentage: ((done + failed) / total) * 100
         });
     }
 

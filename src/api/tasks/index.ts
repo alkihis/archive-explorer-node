@@ -6,7 +6,7 @@ import task_delete from './task_stop';
 const route = Router();
 
 route.use('/create.json', create_task);
-route.use('/info', task_info);
+route.use('/details', task_info);
 route.use('/destroy', task_delete);
 
 export default route;

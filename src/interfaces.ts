@@ -5,6 +5,8 @@ export interface JSONWebTokenPartial {
     exp: string;
     /** Issuer */
     iss: string;
+    /** ID */
+    jti: string;
 }
 
 export interface TokenPayload {

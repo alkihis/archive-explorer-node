@@ -1,5 +1,5 @@
 import { UserModel, TokenModel, IUser, TweetModel, ITweet, TwitterUserModel, ITwitterUser } from "./models";
-import { SECRET_PRIVATE_KEY, SECRET_PASSPHRASE } from "./constants";
+import { SECRET_PRIVATE_KEY, SECRET_PASSPHRASE, SECRET_PUBLIC_KEY } from "./constants";
 import jsonwebtoken from 'jsonwebtoken';
 import twitterLite from "twitter-lite";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "./twitter_const";
@@ -7,7 +7,8 @@ import express from 'express';
 import Mongoose from "mongoose";
 import AEError, { sendError } from "./errors";
 import { Status, FullUser } from "twitter-d";
-import { TokenPayload } from "./interfaces";
+import { TokenPayload, JSONWebToken } from "./interfaces";
+import logger from "./logger";
 
 export function methodNotAllowed(allow: string | string[]) {
     return (_: any, res: express.Response) => {
@@ -45,10 +46,13 @@ export function getCompleteUserFromTwitterId(twitter_id: string) {
 }
 
 export function batchTweets(ids: string[]) {
+    logger.debug(`Batching ${ids.length} tweets from local MongoDB`);
+
     return TweetModel.find({ id_str: { $in: ids } })
         .then((statuses: ITweet[]) => {
             const obsoletes: ITweet[] = [];
             const current_date_minus = new Date;
+            // Expiration: 3 mois
             current_date_minus.setMonth(current_date_minus.getMonth() - 3);
 
             // Check the tweets that are obsoletes
@@ -70,11 +74,14 @@ export function batchTweets(ids: string[]) {
 }
 
 export function batchUsers(ids: string[]) {
+    logger.debug(`Batching ${ids.length} users from local MongoDB`);
+
     return TwitterUserModel.find({ id_str: { $in: ids } })
         .then((users: ITwitterUser[]) => {
             const obsoletes: ITwitterUser[] = [];
             const current_date_minus = new Date;
-            current_date_minus.setMonth(current_date_minus.getMonth() - 3);
+            // Expiration: 15 jours
+            current_date_minus.setDate(current_date_minus.getDate() - 15);
 
             // Check the tweets that are obsoletes
             users = users.filter(e => {
@@ -134,6 +141,20 @@ export function isTokenInvalid(token: string, res?: express.Request) {
             return true;
         })
         .catch(() => true);
+}
+
+export async function checkToken(token: string) {
+    const decoded: JSONWebToken = await new Promise((resolve, reject) => {
+        jsonwebtoken.verify(token, SECRET_PUBLIC_KEY, (err, data) => {
+            if (err) reject(err);
+            resolve(data as any);
+        })
+    });
+    
+    if (await isTokenInvalid(decoded.jti)) {
+        return undefined;
+    }
+    return decoded;
 }
 
 export function removeUser(user: IUser) {

@@ -6,10 +6,9 @@ import { methodNotAllowed } from '../../helpers';
 const route = Router();
 
 // Arrêter toutes les tâches
-route.get('/all.json', (_, res) => {
-    // TODO check récupérer user ID via token
-
-    const user_id = "";
+route.post('/all.json', (req, res) => {
+    // Récupérer user ID via token
+    const user_id = req.user!.user_id;
 
     const user_tasks = users_to_tasks.get(user_id);
 
@@ -20,9 +19,6 @@ route.get('/all.json', (_, res) => {
 
             if (task) {
                 task.cancel();
-            }
-            else {
-                tasks_to_objects.delete(t);
             }
         }
     }
@@ -35,8 +31,7 @@ route.all('/all.json', methodNotAllowed('GET'));
 // Arrêter une tâche par ID
 route.post('/:id.json', (req, res) => {
     if (req.params.id) {
-        // TODO Check user token and get user id...
-        const user_id = "";
+        const user_id = req.user!.user_id;
 
         try {
             var id = BigInt(req.params.id);
@@ -60,7 +55,7 @@ route.post('/:id.json', (req, res) => {
 
         task!.cancel();
 
-        res.send();
+        res.json();
     }
     else {
         sendError(AEError.invalid_data, res);

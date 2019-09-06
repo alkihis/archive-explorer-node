@@ -18,16 +18,20 @@ let authorized = true;
 
 parentPort!.on('message', (data: WorkerTask) => {
     if (data.type === "task") {
+        console.log("New task on worker");
         // Begin the task !
         startTask(data.credentials, data.tweets)
             .then(() => {
+                console.log("Worker task end");
                 parentPort!.postMessage({ type: "end" });
             })
             .catch(e => {
+                console.error("Worker task end with error", e);
                 parentPort!.postMessage({ type: "error", error: e });
             });
     }
     else if (data.type === "stop") {
+        console.log("Request worker end");
         authorized = false;
     }
 });
@@ -52,8 +56,8 @@ async function startTask(credentials: TwitterCredentials, ids: string[]) {
 
     let current = { done: 0, failed: 0 };
 
-    const done_pp_fn = () => { current.done++; };
-    const failed_pp_fn = () => { current.failed++; };
+    const done_pp_fn = (e: any) => { current.done++; };
+    const failed_pp_fn = (e: any) => { current.failed++; };
 
     while (chunk.length) {
         if (!authorized)

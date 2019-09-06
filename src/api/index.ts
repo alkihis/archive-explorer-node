@@ -9,6 +9,7 @@ import { SECRET_PUBLIC_KEY } from '../constants';
 import { JSONWebToken } from '../interfaces';
 import { isTokenInvalid } from '../helpers';
 import bodyParser from 'body-parser';
+import logger from '../logger';
 
 const route = Router();
 
@@ -20,7 +21,7 @@ route.use(
         isRevoked: (res, payload, done) => {
             isTokenInvalid(payload.jti, res)
                 .then(is_revoked => { done(null, is_revoked); })
-                .catch(e => { done(e); });
+                .catch(e => { logger.error("Unable to check token validity", e); done(e); });
         }
     }).unless(
         { path: ["/api/users/request.json", "/api/users/access.json", "/api/callback_twitter"] }
@@ -41,7 +42,7 @@ declare module 'express-serve-static-core' {
 route.use(bodyParser.urlencoded({ extended: true }));
 
 // parse application/json
-route.use(bodyParser.json());
+route.use(bodyParser.json({ limit: "50mb" }));
 
 // Pas de type system (vieux paquet)
 const mongoSanitize = require('express-mongo-sanitize');
@@ -66,6 +67,9 @@ route.all('/', (_, res) => {
 // Catch JWT erros
 // Can't be used in router, must be declared in top-level
 export function apiErrors(err: any, _: express.Request, res: express.Response, next: Function) {
+    logger.debug("Token identification error:", err.name);
+    logger.verbose("Token error", err);
+
     if (err.name === 'UnauthorizedError') {
         sendError(AEError.invalid_token, res);
     }

@@ -1,9 +1,10 @@
 import { Router } from "express";
 import AEError, { sendError } from "../../errors";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
-import { getCompleteUserFromId, batchUsers, saveTwitterUsers, sanitizeMongoObj } from "../../helpers";
+import { getCompleteUserFromId, batchUsers, saveTwitterUsers, sanitizeMongoObj, methodNotAllowed } from "../../helpers";
 import Twitter from 'twitter-lite';
 import { FullUser } from "twitter-d";
+import logger from "../../logger";
 
 //// BULKING USERS (100 max)
 
@@ -34,6 +35,8 @@ route.post('/', (req, res) => {
       const to_retrieve = ids.filter(e => !ids_existings.has(e));
 
       if (to_retrieve.length) {
+        logger.debug(`Batching ${to_retrieve.length} users from Twitter`);
+
         const bdd_user = await getCompleteUserFromId(req.user!.user_id);
 
         // If user does not exists
@@ -55,7 +58,15 @@ route.post('/', (req, res) => {
           // Save every tweet in mangoose (and catch insert errors)
           .then((users: FullUser[]) => saveTwitterUsers(users).catch(() => sendError(AEError.server_error, res)))
           // Otherwise, send Twitter error
-          .catch(e => sendError(AEError.twitter_error, res, e));
+          .catch(e => {
+            if (e.errors && e.errors[0].code === 17) {
+              // No user match
+              res.json([]);
+              return;
+            }
+
+            sendError(AEError.twitter_error, res, e)
+          });
 
         if (!twitter_users) {
           return;
@@ -75,5 +86,7 @@ route.post('/', (req, res) => {
     sendError(AEError.invalid_request, res);
   }
 });
+
+route.all('/', methodNotAllowed('POST'));
 
 export default route;

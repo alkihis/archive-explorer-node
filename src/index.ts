@@ -26,21 +26,28 @@ if (commander.logLevel) {
 
 const app = express();
 
-/// DEBUG ONLY
-app.use(cors());
-
 const http = http_base.createServer(app);
+
+app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
+app.options('*', cors({ credentials: true, origin: 'http://localhost:3000' }));
+
 const io = socket_io(http);
 export default io;
+
+logger.debug("Establishing MongoDB connection");
 
 mongoose.connect('mongodb://localhost:3281/ae', { useNewUrlParser: true });
 
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
+    logger.verbose("MongoDB connection is open");
+
+    logger.debug("Serving API");
     app.use('/api', api_index);
     app.use('/api', apiErrors);
     
+    logger.debug("Serving static website");
     // File should be in build/
     app.use('/', express.static(path.join(__dirname, "../static/www")));
     
@@ -49,8 +56,9 @@ db.once('open', function() {
         res.status(404).send();
     });
     
-    app.listen(commander.port, () => {
-        console.log(`Archive Explorer Server ${VERSION} is listening on port ${commander.port}`);
+    // Use http, not app !
+    http.listen(commander.port, () => {
+        logger.info(`Archive Explorer Server ${VERSION} is listening on port ${commander.port}`);
     });
     
     startIo();

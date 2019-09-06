@@ -1,9 +1,10 @@
 import { Router } from "express";
 import AEError, { sendError } from "../../errors";
-import { batchTweets, getCompleteUserFromId, saveTweets, sanitizeMongoObj } from "../../helpers";
+import { batchTweets, getCompleteUserFromId, saveTweets, sanitizeMongoObj, methodNotAllowed } from "../../helpers";
 import Twitter from 'twitter-lite';
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
 import { Status } from "twitter-d";
+import logger from "../../logger";
 
 //// BULKING TWEETS (100 max)
 
@@ -11,6 +12,7 @@ const route = Router();
 
 route.post('/', (req, res) => {
   // Download tweets from twitter
+
   if (req.user && req.body && req.body.ids && Array.isArray(req.body.ids)) {
     const ids: string[] = req.body.ids;
 
@@ -34,6 +36,8 @@ route.post('/', (req, res) => {
       const to_retrieve = ids.filter(e => !ids_existings.has(e));
 
       if (to_retrieve.length) {
+        logger.debug(`Batching ${to_retrieve.length} tweets from Twitter`);
+
         const bdd_user = await getCompleteUserFromId(req.user!.user_id);
 
         // If user does not exists
@@ -79,5 +83,7 @@ route.post('/', (req, res) => {
     sendError(AEError.invalid_request, res);
   }
 });
+
+route.all('/', methodNotAllowed('POST'));
 
 export default route;
