@@ -20,7 +20,7 @@ export function startIo() {
             } catch (e) { }
             
             if (!payload || !payload.user_id) {
-                socket.emit('error', { id, msg: "Can't verify token or user is invalid" });
+                socket.emit('task error', { id, msg: "Can't verify token or user is invalid" });
                 return;
             }
 
@@ -31,7 +31,7 @@ export function startIo() {
                 try {
                     var id_int = BigInt(id);
                 } catch (e) {
-                    socket.emit('error', { id, msg: "Task ID is invalid" });
+                    socket.emit('task error', { id, msg: "Task ID is invalid" });
                     return;
                 } 
     
@@ -54,6 +54,10 @@ export function startIo() {
         
                         task.subscribe(socket);
                     }
+                }
+                else {
+                    // La tâche n'existe pas / plus
+                    socket.emit('task error', { id, msg: "Task does not exists" });
                 }
             }
         });

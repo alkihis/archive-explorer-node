@@ -9,7 +9,8 @@ export interface IUser extends mongoose.Document {
     twitter_name: string,
     twitter_screen_name: string,
     twitter_id: string,
-    profile_picture: string
+    profile_picture: string,
+    created_at: Date,
 }  
 const user_schema = new mongoose.Schema({
     oauth_token: String,
@@ -19,7 +20,8 @@ const user_schema = new mongoose.Schema({
     twitter_name: String,
     twitter_screen_name: String,
     twitter_id: String,
-    profile_picture: String
+    profile_picture: String,
+    created_at: Date,
 });
 
 export interface IToken extends mongoose.Document {

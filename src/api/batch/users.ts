@@ -1,7 +1,7 @@
 import { Router } from "express";
 import AEError, { sendError } from "../../errors";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
-import { getCompleteUserFromId, batchUsers, saveTwitterUsers, sanitizeMongoObj, methodNotAllowed } from "../../helpers";
+import { getCompleteUserFromId, batchUsers, saveTwitterUsers, sanitizeMongoObj, methodNotAllowed, sendTwitterError } from "../../helpers";
 import Twitter from 'twitter-lite';
 import { FullUser } from "twitter-d";
 import logger from "../../logger";
@@ -65,7 +65,7 @@ route.post('/', (req, res) => {
               return;
             }
 
-            sendError(AEError.twitter_error, res, e)
+            sendTwitterError(e, res);
           });
 
         if (!twitter_users) {

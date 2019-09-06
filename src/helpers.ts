@@ -257,3 +257,20 @@ export function suppressUselessTUserProperties(user: FullUser) {
 
     return user;
 } 
+
+export function sendTwitterError(e: any, res: express.Response) {
+    if (e.errors) {
+        if (e.errors[0].code === 32 || e.errors[0].code === 89 || e.errors[0].code === 99) {
+            sendError(AEError.twitter_credentials_expired, res);
+        }
+        else if (e.errors[0].code === 88) {
+            sendError(AEError.twitter_rate_limit, res);
+        }
+        else {
+            sendError(AEError.twitter_error, res, e);
+        }
+    }
+    else {
+        sendError(AEError.server_error, res);
+    }
+}

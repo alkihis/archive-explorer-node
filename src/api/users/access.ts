@@ -101,6 +101,7 @@ route.post('/', (req, res) => {
                     profile_picture: t_user.profile_image_url_https,
                     user_id: t_user.id_str,
                     last_login: new Date,
+                    created_at: new Date,
                 });
                 user.save();
             }

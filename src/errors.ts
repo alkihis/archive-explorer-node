@@ -4,7 +4,8 @@ import { Response } from "express";
 // A code will be automatically given (numeric order, the first is 1).
 enum AEError {
     inexistant = 1, invalid_route, server_error, invalid_data, invalid_request,
-    forbidden, invalid_token, invalid_verifier, invalid_method, twitter_error,
+    forbidden, invalid_token, invalid_verifier, invalid_method, twitter_error, 
+    twitter_credentials_expired, twitter_rate_limit,
 };
 
 // Specify here the corresponding error message and HTTP code for the error
@@ -19,6 +20,8 @@ const errors: { [errorCode: string]: [string, number] } = {
     [AEError.invalid_verifier]: ["OAuth verifier is invalid, please renew your request with valid credentials", 400],
     [AEError.invalid_method]: ["Invalid HTTP method", 405],
     [AEError.twitter_error]: ["Twitter error. See .error for explicit details", 400],
+    [AEError.twitter_credentials_expired]: ["Twitter tokens has expired or has been revoked. Please log in again.", 403],
+    [AEError.twitter_rate_limit]: ["Twitter send a too many requests error. Please try again later.", 429],
 };
 
 export default AEError;

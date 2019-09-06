@@ -1,6 +1,6 @@
 import { Router } from "express";
 import AEError, { sendError } from "../../errors";
-import { batchTweets, getCompleteUserFromId, saveTweets, sanitizeMongoObj, methodNotAllowed } from "../../helpers";
+import { batchTweets, getCompleteUserFromId, saveTweets, sanitizeMongoObj, methodNotAllowed, sendTwitterError } from "../../helpers";
 import Twitter from 'twitter-lite';
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
 import { Status } from "twitter-d";
@@ -63,7 +63,7 @@ route.post('/', (req, res) => {
           // Save every tweet in mangoose (and catch insert errors)
           .then((statuses: Status[]) => saveTweets(statuses).catch(() => sendError(AEError.server_error, res)))
           // Otherwise, send Twitter error
-          .catch(e => sendError(AEError.twitter_error, res, e));
+          .catch(e => sendTwitterError(e, res));
 
         if (!twitter_tweets) {
           return;
