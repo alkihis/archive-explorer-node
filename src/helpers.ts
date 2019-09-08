@@ -274,3 +274,10 @@ export function sendTwitterError(e: any, res: express.Response) {
         sendError(AEError.server_error, res);
     }
 }
+
+export async function deleteUser(user_id: string) {
+    // Invalidate all tokens
+    await TokenModel.deleteMany({ user_id });
+    // Delete user
+    await UserModel.deleteOne({ user_id });
+}
