@@ -50,7 +50,10 @@ db.once('open', function() {
     logger.debug("Serving static website");
     // File should be in build/
     app.use('/', express.static(path.join(__dirname, "../static/www")));
-    
+    app.use('*', (_, response) => {
+        response.sendfile(path.join(__dirname, "../static/www/index.html"));
+    });
+
     // 404 not found for all others pages
     app.use((_, res) => {
         res.status(404).send();

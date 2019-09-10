@@ -65,11 +65,9 @@ route.post('/', (req, res) => {
           // Otherwise, send Twitter error
           .catch(e => sendTwitterError(e, res));
 
-        if (!twitter_tweets) {
-          return;
+        if (twitter_tweets) {
+          existings.push(...twitter_tweets);
         }
-
-        existings.push(...twitter_tweets);
       }
 
       // Send response

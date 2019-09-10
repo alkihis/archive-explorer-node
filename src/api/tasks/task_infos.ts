@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import AEError, { sendError } from '../../errors';
-import { tasks_to_objects, users_to_tasks } from './Task';
 import { methodNotAllowed } from '../../helpers';
+import Task from './Task';
 
 const route = Router();
 
@@ -9,15 +9,10 @@ route.get('/all.json', (req, res) => {
     // récupérer user ID via token
     const user_id = req.user!.user_id;
 
-    const user_tasks = users_to_tasks.get(user_id);
+    const tasks = Task.tasksOf(user_id);
     
     // Répertorie toutes les tâches de l'utilisateur et renvoie leur progression actuelle
-    if (user_tasks) {
-        res.json([...user_tasks].map(t => tasks_to_objects.get(t)).filter(t => t).map(t => t!.current_progression));
-    }
-    else {
-        res.json([]);
-    }
+    res.json([...tasks].map(t => t!.current_progression));
 });
 
 route.all('/all.json', methodNotAllowed('GET'));
@@ -28,24 +23,26 @@ route.get('/:id.json', (req, res) => {
         const user_id = req.user!.user_id;
 
         // Recherche la tâche :id
-        const id = BigInt(req.params.id);
+        try {
+            var id = BigInt(req.params.id);
+        } catch (e) {
+            // Invalid conversation
+            sendError(AEError.invalid_request, res);
+            return;
+        }
 
-        const user_tasks = users_to_tasks.get(user_id);
-        
-        // Si l'utilisateur peut accéder à cette tâche
-        if (user_tasks && user_tasks.has(id)) {
-            const task = tasks_to_objects.get(id);
+        const task = Task.get(id);
 
-            if (task) {
+        if (task) {
+            if (task.owner === user_id) {
                 res.json(task.current_progression);
             }
             else {
-                sendError(AEError.inexistant, res);
+                sendError(AEError.forbidden, res);
             }
         }
         else {
-            // Tâche non autorisée
-            sendError(AEError.forbidden, res);
+            sendError(AEError.inexistant, res);
         }
     }
     else {

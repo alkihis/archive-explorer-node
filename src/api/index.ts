@@ -10,6 +10,7 @@ import { JSONWebToken } from '../interfaces';
 import { isTokenInvalid } from '../helpers';
 import bodyParser from 'body-parser';
 import logger from '../logger';
+import { IToken } from '../models';
 
 const route = Router();
 
@@ -24,14 +25,14 @@ route.use(
                 .catch(e => { logger.error("Unable to check token validity", e); done(e); });
         }
     }).unless(
-        { path: ["/api/users/request.json", "/api/users/access.json", "/api/callback_twitter"] }
+        { path: ["/api/users/request.json", "/api/users/access.json", "/api/callback_twitter", "/api"] }
     )
 );
 
 // Extends Express request
 declare module 'express-serve-static-core' {
     interface Request {
-      user?: JSONWebToken
+      user?: JSONWebToken;
     }
 }
 
@@ -64,8 +65,7 @@ route.all('/', (_, res) => {
 // Catch JWT erros
 // Can't be used in router, must be declared in top-level
 export function apiErrors(err: any, _: express.Request, res: express.Response, next: Function) {
-    logger.debug("Token identification error:", err.name);
-    logger.verbose("Token error", err);
+    logger.debug("Token identification error: " + err.name);
 
     if (err.name === 'UnauthorizedError') {
         sendError(AEError.invalid_token, res);

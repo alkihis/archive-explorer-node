@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { tasks_to_objects, users_to_tasks } from './Task';
 import AEError, { sendError } from '../../errors';
 import { methodNotAllowed } from '../../helpers';
+import Task from './Task';
 
 const route = Router();
 
@@ -10,17 +10,11 @@ route.post('/all.json', (req, res) => {
     // Récupérer user ID via token
     const user_id = req.user!.user_id;
 
-    const user_tasks = users_to_tasks.get(user_id);
+    const user_tasks = Task.tasksOf(user_id);
 
     // Si l'utilisateur a des tâches
-    if (user_tasks && user_tasks.size) {
-        for (const t of user_tasks) {
-            const task = tasks_to_objects.get(t);
-
-            if (task) {
-                task.cancel();
-            }
-        }
+    for (const t of user_tasks) {
+        t.cancel();
     }
 
     res.send();
@@ -41,12 +35,12 @@ route.post('/:id.json', (req, res) => {
         }
 
         // Recherche si la tâche existe
-        if (!tasks_to_objects.has(id)) {
+        const task = Task.get(id);
+
+        if (!task) {
             sendError(AEError.inexistant, res);
             return;
         }
-        
-        const task = tasks_to_objects.get(id);
 
         if (task!.owner !== user_id) {
             sendError(AEError.forbidden, res);

@@ -1,8 +1,8 @@
 import io from '../../index';
 import { Socket } from 'socket.io';
-import { users_to_tasks, tasks_to_objects } from './Task';
 import { checkToken } from '../../helpers';
 import logger from '../../logger';
+import Task from './Task';
 
 // Task server (uses socket.io)
 
@@ -35,25 +35,24 @@ export function startIo() {
                     return;
                 } 
     
-                // Récupération des tâches en cours pour cet utilisateur
-                const user_tasks = users_to_tasks.get(user_id);
+                // Récupération de la tâche
+                const task = Task.get(id_int);
     
-                // Si elle appartient à cet utilisateur
-                if (user_tasks && user_tasks.has(id_int)) {
-                    // Si la tâche existe encore
-                    const task = tasks_to_objects.get(id_int);
-        
-                    // Si elle existe
-                    if (task) {
-                        // Si ce socket n'est pas déjà inscrit
-                        if (!socket_to_tasks.has(socket)) {
-                            socket_to_tasks.set(socket, new Set);
-                        }
-                        
-                        socket_to_tasks.get(socket)!.add(id_int);
-        
-                        task.subscribe(socket);
+                if (task) {
+                    // Si elle n'appartient pas à l'utilisateur
+                    if (task.owner !== user_id) {
+                        socket.emit('task error', { id, msg: "Task does not belong to you" });
+                        return;
                     }
+
+                    // Si ce socket n'est pas déjà inscrit
+                    if (!socket_to_tasks.has(socket)) {
+                        socket_to_tasks.set(socket, new Set);
+                    }
+                    
+                    socket_to_tasks.get(socket)!.add(id_int);
+    
+                    task.subscribe(socket);
                 }
                 else {
                     // La tâche n'existe pas / plus
@@ -85,25 +84,23 @@ export function startIo() {
                     return;
                 } 
 
-                // Récupération des tâches en cours pour cet utilisateur
-                const user_tasks = users_to_tasks.get(user_id);
-
-                // Si elle appartient à cet utilisateur
-                if (user_tasks && user_tasks.has(id_int)) {
-                    // Si la tâche existe encore
-                    const task = tasks_to_objects.get(id_int);
-
-                    // Si elle existe
-                    if (task) {
-                        // Si ce socket n'est pas déjà inscrit
-                        if (!socket_to_tasks.has(socket)) {
-                            return;
-                        }
-                        
-                        socket_to_tasks.get(socket)!.delete(id_int);
-
-                        task.unsubscribe(socket);
+                // Récupération de la tâche
+                const task = Task.get(id_int);
+    
+                if (task) {
+                    // Si elle n'appartient pas à l'utilisateur
+                    if (task.owner !== user_id) {
+                        return;
                     }
+
+                    // Si ce socket n'est pas inscrit
+                    if (!socket_to_tasks.has(socket)) {
+                        return;
+                    }
+                    
+                    socket_to_tasks.get(socket)!.delete(id_int);
+
+                    task.unsubscribe(socket);
                 }
             }
         });
@@ -114,10 +111,10 @@ export function startIo() {
             if (tasks) {
                 // Suppression de toutes les tâches affectées à ce socket
                 for (const t of tasks) {
-                    const real_t = tasks_to_objects.get(t);
+                    const task = Task.get(t);
     
-                    if (real_t) {
-                        real_t.unsubscribe(socket);
+                    if (task) {
+                        task.unsubscribe(socket);
                     }
                 }
             }

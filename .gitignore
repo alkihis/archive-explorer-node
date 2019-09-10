@@ -3,3 +3,5 @@ node_modules
 build
 twitter_const.ts
 misc
+static/old_www
+static/www

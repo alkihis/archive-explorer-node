@@ -60,19 +60,16 @@ route.post('/', (req, res) => {
           // Otherwise, send Twitter error
           .catch(e => {
             if (e.errors && e.errors[0].code === 17) {
-              // No user match
-              res.json([]);
+              // No user match, skipping
               return;
             }
 
             sendTwitterError(e, res);
           });
 
-        if (!twitter_users) {
-          return;
+        if (twitter_users) {
+          existings.push(...twitter_users);
         }
-
-        existings.push(...twitter_users);
       }
 
       // Send response

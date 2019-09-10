@@ -116,6 +116,8 @@ route.post('/', (req, res) => {
                 user.save();
             }
 
+            logger.debug(`User ${user!.twitter_screen_name} logged and token ${uniq_id} created.`);
+
             // L'utilisateur est prêt !
             res.json({
                 status: true,

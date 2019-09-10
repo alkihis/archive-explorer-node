@@ -42,17 +42,46 @@ interface Credentials {
     oauth_token_secret: string;
 }
 
-// Key is task ID
-export const tasks_to_objects: Map<BigInt, Task> = new Map;
-
-// Key is user id
-export const users_to_tasks: Map<string, Set<BigInt>> = new Map;
-
 export default class Task {
+    protected static current_id = 1n;
+    // Key is Task ID
+    protected static readonly tasks_to_objects: Map<BigInt, Task> = new Map;
+    // protected static readonly users_to_tasks: Map<string, Set<BigInt>> = new Map;
+
+    // STATIC METHODS
+    static get(id: string | BigInt) {
+        if (typeof id === 'string') {
+            id = BigInt(id);
+        }
+
+        return this.tasks_to_objects.get(id);
+    }
+
+    static tasksOf(user_id: string) {
+        const tasks: Set<Task> = new Set;
+
+        for (const [, t] of this.tasks_to_objects) {
+            if (t.user.user_id === user_id) {
+                tasks.add(t);
+            }
+        }
+
+        return tasks;
+    }
+
+    protected static register(task: Task) {
+        this.tasks_to_objects.set(task.id, task);
+    }
+
+    protected static unregister(task: Task) {
+        this.tasks_to_objects.delete(task.id);
+    }
+
+    // INSTANCE PROPERTIES & METHODS
+
     readonly id: BigInt;
 
     protected sockets: Set<Socket> = new Set;
-    protected static current_id = 1n;
 
     protected pool: Worker[] = [];
 
@@ -85,14 +114,13 @@ export default class Task {
         this.remaining = tweets_id.length;
 
         // Register task
-        tasks_to_objects.set(this.id, this);
+        Task.register(this);
 
-        // Register to user to tasks
-        if (!users_to_tasks.has(this.user.user_id)) {
-            users_to_tasks.set(this.user.user_id, new Set);
-        }
-
-        users_to_tasks.get(this.user.user_id)!.add(this.id);
+        // #USER_TASK Register to user to tasks (useless for now, see if it is too slow)
+        // if (!users_to_tasks.has(this.user.user_id)) {
+        //     users_to_tasks.set(this.user.user_id, new Set);
+        // }
+        // users_to_tasks.get(this.user.user_id)!.add(this.id);
 
         // Spawn worker thread(s)...
         // Pour le moment, il n'y en a qu'un seul de lancé
@@ -185,16 +213,17 @@ export default class Task {
         this.clearSubs();
 
         // Unregister task from Maps
-        tasks_to_objects.delete(this.id);
+        Task.unregister(this);
 
-        const tasks = users_to_tasks.get(this.user.user_id);
-        if (tasks) {
-            tasks.delete(this.id);
+        // #USER_TASK
+        // const tasks = users_to_tasks.get(this.user.user_id);
+        // if (tasks) {
+        //     tasks.delete(this.id);
 
-            if (!tasks.size) {
-                users_to_tasks.delete(this.user.user_id);
-            }
-        }
+        //     if (!tasks.size) {
+        //         users_to_tasks.delete(this.user.user_id);
+        //     }
+        // }
 
         logger.verbose(`Task ${this.id} has ended`);
     }

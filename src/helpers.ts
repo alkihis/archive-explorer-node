@@ -118,11 +118,11 @@ export function saveTwitterUsers(users: FullUser[]) {
 }
 
 export function invalidateToken(token: string) {
-    return TokenModel.remove({ token });
+    return TokenModel.deleteOne({ token });
 }
 
 export function invalidateTokensFromUser(user_id: string) {
-    return TokenModel.remove({ user_id });
+    return TokenModel.deleteMany({ user_id });
 }
 
 export function isTokenInvalid(token: string, res?: express.Request) {
@@ -134,7 +134,8 @@ export function isTokenInvalid(token: string, res?: express.Request) {
                 if (res) {
                     model.login_ip = res.connection.remoteAddress!;
                 }
-                model.save();
+                // Sauvegarde sans considérer une erreur
+                model.save().catch(e => e);
 
                 return false;
             }
@@ -277,7 +278,7 @@ export function sendTwitterError(e: any, res: express.Response) {
 
 export async function deleteUser(user_id: string) {
     // Invalidate all tokens
-    await TokenModel.deleteMany({ user_id });
+    await invalidateTokensFromUser(user_id);
     // Delete user
     await UserModel.deleteOne({ user_id });
 }
