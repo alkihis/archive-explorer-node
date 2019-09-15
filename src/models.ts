@@ -69,3 +69,10 @@ export const TokenModel = mongoose.model<IToken>('TokenModel', token_schema, 'ae
 export const TweetModel = mongoose.model<ITweet>('TweetModel', tweet_schema, 'ae_tweets'); 
 
 export const TwitterUserModel = mongoose.model<ITwitterUser>('TwitterUserModel', user_twitter_schema, 'ae_twitter_users'); 
+
+export const COLLECTIONS = {
+    'ae_user': UserModel,
+    'ae_token': TokenModel,
+    'ae_tweets': TweetModel,
+    'ae_twitter_users': TwitterUserModel
+};
