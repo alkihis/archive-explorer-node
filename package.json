@@ -3,12 +3,14 @@
   "version": "1.1.0",
   "description": "",
   "main": "index.js",
+  "license": "CC BY-SA 4.0",
+  "repository": "https://github.com/alkihis/archive-explorer-node",
+  "bugs": "https://github.com/alkihis/archive-explorer-node/issues",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
   "dependencies": {
     "@types/cors": "^2.8.6",
     "@types/express": "^4.17.1",

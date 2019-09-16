@@ -1,7 +1,7 @@
 node_modules
 .ssh
 build
-twitter_const.ts
 misc
 static/old_www
 static/www
+settings.json
