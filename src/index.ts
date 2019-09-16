@@ -36,6 +36,7 @@ app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
 app.options('*', cors({ credentials: true, origin: 'http://localhost:3000' }));
 
 /* DEPLOY
+const SERVER_HTTPS_KEYS = "/etc/letsencrypt/live/beta.archive-explorer.fr/";
 const credentials = {
     key: readFileSync(SERVER_HTTPS_KEYS + 'privkey.pem', 'utf8'),
     cert: readFileSync(SERVER_HTTPS_KEYS + 'cert.pem', 'utf8'),
