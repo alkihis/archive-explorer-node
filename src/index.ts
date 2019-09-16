@@ -6,11 +6,12 @@ import api_index, { apiErrors } from './api/index';
 import path from 'path';
 import socket_io from 'socket.io';
 import http_base from 'http';
-// import https_base from 'https';
+import https_base from 'https';
 import { startIo } from './api/tasks/task_server';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import { COLLECTIONS } from './models';
+import { readFileSync } from 'fs';
 
 // archive-explorer-server main file
 // Meant to serve archive-explorer website, 
@@ -30,12 +31,13 @@ if (commander.logLevel) {
 
 const app = express();
 
-const http = http_base.createServer(app);
+// const http = http_base.createServer(app);
 
 app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
 app.options('*', cors({ credentials: true, origin: 'http://localhost:3000' }));
 
-/* DEPLOY
+/* DEPLOY */
+const SERVER_HTTPS_KEYS = "/etc/letsencrypt/live/beta.archive-explorer.fr/";
 const credentials = {
     key: readFileSync(SERVER_HTTPS_KEYS + 'privkey.pem', 'utf8'),
     cert: readFileSync(SERVER_HTTPS_KEYS + 'cert.pem', 'utf8'),
@@ -44,7 +46,7 @@ const credentials = {
 
 const http = express();
 const https = https_base.createServer(credentials, app); 
-*/
+/* */
 
 const io = socket_io(http);
 export default io;
@@ -90,12 +92,14 @@ db.once('open', function() {
         res.status(404).send();
     });
     
+    /*
     // Use http, not app !
     http.listen(commander.port, () => {
         logger.info(`Archive Explorer Server ${VERSION} is listening on port ${commander.port}`);
     });
+    */
     
-    /* DEPLOY
+    /* DEPLOY */
     // set up a route to redirect http to https
     http.get('*', (req, res) => {  
         res.redirect('https://' + req.headers.host + req.url);
@@ -108,7 +112,7 @@ db.once('open', function() {
     https.listen(443, () => {
         logger.info(`Archive Explorer Server ${VERSION} is listening on port 443`);
     });
-    */
+    /* */
     
     startIo();
 });
