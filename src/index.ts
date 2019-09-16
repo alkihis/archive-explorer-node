@@ -48,7 +48,11 @@ const http = express();
 const https = https_base.createServer(credentials, app); 
 /* */
 
-const io = socket_io(http);
+// DEV
+// const io = socket_io(http);
+
+// DEPLOY
+const io = socket_io(https);
 export default io;
 
 logger.debug("Establishing MongoDB connection");
