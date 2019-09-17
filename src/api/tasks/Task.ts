@@ -11,12 +11,14 @@ export interface TaskProgression {
     total: number;
     id: string;
     error?: string;
+    type: TaskType;
 }
 
 interface WorkerTask { 
     type: "task" | "stop", 
     credentials: TwitterCredentials, 
-    tweets: string[] 
+    tweets: string[],
+    task_type: TaskType,
 }
 
 interface WorkerMessage {
@@ -40,6 +42,12 @@ interface Credentials {
     user_id: string;
     oauth_token: string;
     oauth_token_secret: string;
+}
+
+export type TaskType = "tweet" | "mute" | "block" | "fav";
+
+export function isValidTaskType(type: string) : type is TaskType {
+    return type === "tweet" || type === "mute" || type === "block" || type === "fav";
 }
 
 export default class Task {
@@ -69,6 +77,20 @@ export default class Task {
         return tasks;
     }
 
+    static typeOf(type: TaskType, user_id: string) {
+        const tasks = this.tasksOf(user_id);
+
+        const t = new Set<Task>();
+
+        for (const task of tasks) {
+            if (task.type === type) {
+                t.add(task);
+            }
+        }
+
+        return t;
+    }
+
     protected static register(task: Task) {
         this.tasks_to_objects.set(task.id, task);
     }
@@ -93,7 +115,8 @@ export default class Task {
 
     constructor(
         tweets_id: string[],
-        protected user: Credentials
+        protected user: Credentials,
+        public readonly type: TaskType
     ) { 
         // Auto increment internal ID
         const c = Task.current_id;
@@ -108,7 +131,8 @@ export default class Task {
             done: 0,
             failed: 0,
             percentage: 0,
-            total: tweets_id.length
+            total: tweets_id.length,
+            type: this.type
         };
 
         this.remaining = tweets_id.length;
@@ -133,7 +157,8 @@ export default class Task {
                 oauth_token: this.user.oauth_token, 
                 oauth_token_secret: this.user.oauth_token_secret
             },
-            type: "task"
+            type: "task",
+            task_type: this.type
         };
 
         // Assignation des listeners
@@ -182,7 +207,8 @@ export default class Task {
     cancel() {
         logger.debug("Canceling task", this.id);
         this.sendMessageToSockets('task cancel', {
-            id: String(this.id)
+            id: String(this.id),
+            type: this.type
         });
 
         this.end(false);
@@ -196,7 +222,8 @@ export default class Task {
         // Send end message to sockets
         if (with_end_message) {
             this.sendMessageToSockets('task end', {
-                id: String(this.id)
+                id: String(this.id),
+                type: this.type
             });
         }
 
@@ -253,13 +280,25 @@ export default class Task {
         const total = done + remaining + failed;
 
         this.emit({
-            done, remaining, id: String(this.id), failed, total, percentage: ((done + failed) / total) * 100
+            done, remaining, 
+            id: String(this.id), 
+            failed, 
+            total, 
+            percentage: ((done + failed) / total) * 100,
+            type: this.type
         });
     }
 
     protected emitError(reason = "Unknown error") {
         this.emit({
-            done: 0, remaining: 0, id: String(this.id), total: 0, failed: 0, percentage: 0, error: reason
+            done: 0, 
+            remaining: 0, 
+            id: String(this.id), 
+            total: 0, 
+            failed: 0, 
+            percentage: 0,
+            error: reason,
+            type: this.type
         });
     }
 }

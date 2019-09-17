@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import AEError, { sendError } from '../../errors';
-import Task from './Task';
+import Task, { isValidTaskType } from './Task';
 import { methodNotAllowed, getCompleteUserFromId } from '../../helpers';
 import logger from '../../logger';
 
@@ -15,17 +15,17 @@ route.post('/', (req, res) => {
             return;
         }
 
-        // Tweets IDs are in req.body.tweets, splitted by comma
-        if (req.body && req.body.tweets && typeof req.body.tweets === 'string') {
-            const tweets = (req.body.tweets as string).split(',');
+        // IDs are in req.body.ids, splitted by comma
+        if (req.body && req.body.ids && typeof req.body.ids === 'string' && req.body.type && isValidTaskType(req.body.type)) {
+            const ids = (req.body.ids as string).split(',');
 
-            if (tweets.length) {
+            if (ids.length) {
                 // Création tâche (elle s'enregistre correctement automatiquement)
-                const task = new Task(tweets, {
+                const task = new Task(ids, {
                     user_id: user.user_id,
                     oauth_token: user.oauth_token,
                     oauth_token_secret: user.oauth_token_secret
-                });
+                }, req.body.type);
 
                 res.json({ status: true, task: String(task.id) });
             }

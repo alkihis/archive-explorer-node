@@ -11,16 +11,19 @@ interface TwitterCredentials {
 interface WorkerTask { 
     type: "task" | "stop", 
     credentials: TwitterCredentials, 
-    tweets: string[] 
+    tweets: string[],
+    task_type: TaskType
 }
+
+type TaskType = "tweet" | "mute" | "block" | "fav";
 
 let authorized = true;
 
 parentPort!.on('message', (data: WorkerTask) => {
     if (data.type === "task") {
-        console.log("New task on worker");
+        console.log("New task on worker of type", data.task_type);
         // Begin the task !
-        startTask(data.credentials, data.tweets)
+        startTask(data.credentials, data.tweets, data.task_type)
             .then(() => {
                 console.log("Worker task end");
                 parentPort!.postMessage({ type: "end" });
@@ -36,7 +39,7 @@ parentPort!.on('message', (data: WorkerTask) => {
     }
 });
 
-async function startTask(credentials: TwitterCredentials, ids: string[]) {
+function startTask(credentials: TwitterCredentials, ids: string[], type: TaskType) {
     const user = new Twitter({ 
         consumer_key: credentials.consumer_token,
         consumer_secret: credentials.consumer_secret,
@@ -44,10 +47,66 @@ async function startTask(credentials: TwitterCredentials, ids: string[]) {
         access_token_secret: credentials.oauth_token_secret
     });
 
+    switch (type) {
+        case "tweet":
+            return startTweetTask(user, ids);
+        case "fav":
+            return startFavsTask(user, ids);
+        case "block":
+            return startBlockTask(user, ids);
+        case "mute":
+            return startMuteTask(user, ids);
+        default:
+            return Promise.reject("Unexpected task type");
+    }
+}
+
+function startTweetTask(user: Twitter, ids: string[]) {
+    return task(
+        ids,
+        id => user.post('favorites/destroy', { id, include_entities: false }),
+        100,
+        true
+    );
+}
+
+function startFavsTask(user: Twitter, ids: string[]) {
+    return task(
+        ids,
+        id => user.post('favorites/destroy', { id, include_entities: false }),
+        50,
+        true
+    );
+}
+
+function startBlockTask(user: Twitter, ids: string[]) {
+    return task(
+        ids,
+        id => user.post('blocks/destroy', { user_id: id, include_entities: false, skip_status: true }),
+        75,
+        true
+    );
+}
+
+function startMuteTask(user: Twitter, ids: string[]) {
+    return task(
+        ids,
+        id => user.post('mutes/users/destroy', { user_id: id }),
+        75,
+        true
+    );
+}
+
+async function task(
+    ids: string[], 
+    do_task: (id: string) => Promise<any>, 
+    chunk_len: number, 
+    retry_on_88 = true
+) {
     // do the task...
     let current_i = 0;
     // concurrent running tasks
-    const CHUNK_LEN = 100;
+    const CHUNK_LEN = chunk_len;
 
     let promises: Promise<any>[] = [];
 
@@ -56,8 +115,16 @@ async function startTask(credentials: TwitterCredentials, ids: string[]) {
 
     let current = { done: 0, failed: 0 };
 
-    const done_pp_fn = (e: any) => { current.done++; };
-    const failed_pp_fn = (e: any) => { current.failed++; };
+    const done_pp_fn = () => { current.done++; };
+    const failed_pp_fn: (e: any) => Promise<any> | undefined = (e: any) => { 
+        // Check errors
+        if (retry_on_88 && e && e.errors && e.errors[0].code === 88) {
+            // Rate limit exceeded
+            return Promise.reject(88);
+        }
+
+        current.failed++; 
+    };
 
     while (chunk.length) {
         if (!authorized)
@@ -71,7 +138,7 @@ async function startTask(credentials: TwitterCredentials, ids: string[]) {
             }
 
             promises.push(
-                user.post('statuses/destroy/' + id)
+                do_task(id)
                     .then(done_pp_fn)
                     .catch(failed_pp_fn)
             );
@@ -80,7 +147,25 @@ async function startTask(credentials: TwitterCredentials, ids: string[]) {
         if (!authorized)
             return;
 
-        await Promise.all(promises);
+        try {
+            await Promise.all(promises);
+        } catch (e) {
+            // Un tweet est en rate limit exceeded
+            if (e === 88 && retry_on_88) {
+                console.log(`Rate limit exceeded for worker`);
+                
+                // Reset des var de boucle
+                promises = [];
+
+                // Attends 5 minutes avant de recommencer
+                await sleep(1000 * 60 * 5);
+
+                current.done = 0;
+                current.failed = 0;
+                
+                continue;
+            }
+        }
         
         // Emet le message d'avancement
         parentPort!.postMessage({ 
@@ -92,8 +177,11 @@ async function startTask(credentials: TwitterCredentials, ids: string[]) {
         current.done = 0;
         current.failed = 0;
 
-
         chunk = ids.slice(current_i, current_i + CHUNK_LEN);
         current_i += CHUNK_LEN;
     }
+}
+
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
