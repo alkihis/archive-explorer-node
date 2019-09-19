@@ -100,7 +100,7 @@ export default class Task {
     }
 
     // INSTANCE PROPERTIES & METHODS
-
+    
     readonly id: BigInt;
 
     protected sockets: Set<Socket> = new Set;
