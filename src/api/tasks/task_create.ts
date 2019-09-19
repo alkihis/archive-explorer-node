@@ -3,6 +3,7 @@ import AEError, { sendError } from '../../errors';
 import Task, { isValidTaskType } from './Task';
 import { methodNotAllowed, getCompleteUserFromId } from '../../helpers';
 import logger from '../../logger';
+import { MAX_TASK_PER_USER, MAX_TASK_PER_USER_SPECIAL } from '../../constants';
 
 const route = Router();
 
@@ -13,6 +14,23 @@ route.post('/', (req, res) => {
         if (!user) {
             sendError(AEError.forbidden, res);
             return;
+        }
+
+        const tasks = Task.tasksOf(user.user_id);
+
+        if (user.special) {
+            // Special allow a derogation to enable more active tasks
+            if (tasks.size >= MAX_TASK_PER_USER_SPECIAL) {
+                sendError(AEError.too_many_tasks, res);
+                return;
+            }
+        }
+        else {
+            // Classic user
+            if (tasks.size >= MAX_TASK_PER_USER) {
+                sendError(AEError.too_many_tasks, res);
+                return;
+            }
         }
 
         // IDs are in req.body.ids, splitted by comma

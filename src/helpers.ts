@@ -282,3 +282,12 @@ export async function deleteUser(user_id: string) {
     // Delete user
     await UserModel.deleteOne({ user_id });
 }
+
+export async function changeSpecial(user_id: string, special = false) {
+    const user = await getCompleteUserFromId(user_id);
+
+    if (user) {
+        user.special = special;
+        user.save();
+    }
+}
