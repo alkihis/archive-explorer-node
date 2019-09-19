@@ -134,6 +134,7 @@ async function task(
             try {
                 BigInt(id);
             } catch (e) {
+                current.failed++;
                 continue;
             }
 
