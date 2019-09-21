@@ -37,7 +37,7 @@ let redirector: express.Express;
 let http_server: http_base.Server | https_base.Server;
 
 if (commander.prod) {
-    const SERVER_HTTPS_KEYS = "/etc/letsencrypt/live/beta.archive-explorer.fr/";
+    const SERVER_HTTPS_KEYS = "/etc/letsencrypt/live/archive-explorer.fr/";
     const credentials = {
         key: readFileSync(SERVER_HTTPS_KEYS + 'privkey.pem', 'utf8'),
         cert: readFileSync(SERVER_HTTPS_KEYS + 'cert.pem', 'utf8'),
