@@ -4,4 +4,6 @@ build
 misc
 static/old_www
 static/www
+log.log
+logs
 settings.json

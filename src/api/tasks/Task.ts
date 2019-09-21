@@ -54,7 +54,7 @@ export default class Task {
     protected static current_id = 1n;
     // Key is Task ID
     protected static readonly tasks_to_objects: Map<BigInt, Task> = new Map;
-    // protected static readonly users_to_tasks: Map<string, Set<BigInt>> = new Map;
+    protected static readonly users_to_tasks: Map<string, Set<Task>> = new Map;
 
     // STATIC METHODS
     static get(id: string | BigInt) {
@@ -66,15 +66,11 @@ export default class Task {
     }
 
     static tasksOf(user_id: string) {
-        const tasks: Set<Task> = new Set;
-
-        for (const [, t] of this.tasks_to_objects) {
-            if (t.user.user_id === user_id) {
-                tasks.add(t);
-            }
+        if (this.users_to_tasks.has(user_id)) {
+            return this.users_to_tasks.get(user_id)!;
         }
 
-        return tasks;
+        return new Set<Task>();
     }
 
     static typeOf(type: TaskType, user_id: string) {
@@ -93,10 +89,26 @@ export default class Task {
 
     protected static register(task: Task) {
         this.tasks_to_objects.set(task.id, task);
+
+        // USER TASK
+        if (!this.users_to_tasks.has(task.owner)) {
+            this.users_to_tasks.set(task.owner, new Set);
+        }
+        this.users_to_tasks.get(task.owner)!.add(task);
     }
 
     protected static unregister(task: Task) {
         this.tasks_to_objects.delete(task.id);
+
+        // USER TASK
+        const tasks = this.users_to_tasks.get(task.owner);
+        if (tasks) {
+            tasks.delete(task);
+
+            if (!tasks.size) {
+                this.users_to_tasks.delete(task.owner);
+            }
+        }
     }
 
     // INSTANCE PROPERTIES & METHODS
@@ -140,12 +152,6 @@ export default class Task {
         // Register task
         Task.register(this);
 
-        // #USER_TASK Register to user to tasks (useless for now, see if it is too slow)
-        // if (!users_to_tasks.has(this.user.user_id)) {
-        //     users_to_tasks.set(this.user.user_id, new Set);
-        // }
-        // users_to_tasks.get(this.user.user_id)!.add(this.id);
-
         // Spawn worker thread(s)...
         // Pour le moment, il n'y en a qu'un seul de lancé
         const worker = new Worker(__dirname + '/worker.js');
@@ -163,7 +169,7 @@ export default class Task {
 
         // Assignation des listeners
         worker.on('message', (data: WorkerMessage) => {
-            logger.verbose("Recieved message from worker:", data);
+            logger.silly("Recieved message from worker:", data);
 
             if (data.type === "info") {
                 // Envoi d'un message de progression de la suppression
@@ -242,15 +248,6 @@ export default class Task {
         // Unregister task from Maps
         Task.unregister(this);
 
-        // #USER_TASK
-        // const tasks = users_to_tasks.get(this.user.user_id);
-        // if (tasks) {
-        //     tasks.delete(this.id);
-
-        //     if (!tasks.size) {
-        //         users_to_tasks.delete(this.user.user_id);
-        //     }
-        // }
 
         logger.verbose(`Task ${this.id} has ended`);
     }

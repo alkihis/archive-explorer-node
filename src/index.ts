@@ -6,11 +6,13 @@ import api_index, { apiErrors } from './api/index';
 import path from 'path';
 import socket_io from 'socket.io';
 import http_base from 'http';
-// import https_base from 'https';
+import https_base from 'https';
 import { startIo } from './api/tasks/task_server';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import { COLLECTIONS } from './models';
+import { readFileSync, mkdirSync } from 'fs';
+import winston from 'winston';
 
 // archive-explorer-server main file
 // Meant to serve archive-explorer website, 
@@ -21,6 +23,7 @@ commander
     .option('-p, --port <port>', 'Server port', Number, 3128)
     .option('-m, --mongo-port <port>', 'Mongo server port', Number, 3281)
     .option('-p, --purge', 'Purge all mongo collection, then quit')
+    .option('-d, --prod', 'Production mode (activate HTTPS, file logging)')
     .option('-l, --log-level [logLevel]', 'Log level [debug|verbose|info|warn|error]', /^(debug|verbose|info|warn|error)$/, 'info')
 .parse(process.argv);
 
@@ -30,28 +33,44 @@ if (commander.logLevel) {
 
 const app = express();
 
-const http = http_base.createServer(app);
+let redirector: express.Express;
+let http_server: http_base.Server | https_base.Server;
 
-app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
-app.options('*', cors({ credentials: true, origin: 'http://localhost:3000' }));
+if (commander.prod) {
+    const SERVER_HTTPS_KEYS = "/etc/letsencrypt/live/beta.archive-explorer.fr/";
+    const credentials = {
+        key: readFileSync(SERVER_HTTPS_KEYS + 'privkey.pem', 'utf8'),
+        cert: readFileSync(SERVER_HTTPS_KEYS + 'cert.pem', 'utf8'),
+        ca: readFileSync(SERVER_HTTPS_KEYS + 'chain.pem', 'utf8')
+    };
 
-/* DEPLOY
-const SERVER_HTTPS_KEYS = "/etc/letsencrypt/live/beta.archive-explorer.fr/";
-const credentials = {
-    key: readFileSync(SERVER_HTTPS_KEYS + 'privkey.pem', 'utf8'),
-    cert: readFileSync(SERVER_HTTPS_KEYS + 'cert.pem', 'utf8'),
-    ca: readFileSync(SERVER_HTTPS_KEYS + 'chain.pem', 'utf8')
-};
+    http_server = https_base.createServer(credentials, app); 
+    redirector = express();
+    commander.port = 443;
 
-const http = express();
-const https = https_base.createServer(credentials, app); 
-*/
+    // Activate file logger
+    try {
+        mkdirSync(__dirname + '/../logs');
+    } catch (e) { }
 
-// DEV
-const io = socket_io(http);
+    logger.add(new winston.transports.File({ filename: __dirname + '/../logs/info.log', level: 'info', eol: "\n" }));
+    logger.add(new winston.transports.File({ filename: __dirname + '/../logs/warn.log', level: 'warn', eol: "\n" }));
+    logger.add(new winston.transports.File({ filename: __dirname + '/../logs/error.log', level: 'error', eol: "\n" }));
+    logger.exceptions.handle(new winston.transports.File({ 
+        filename: __dirname + '/../logs/exceptions.log',
+        eol: "\n"
+    }));
+    logger.exitOnError = false;
+}
+else {
+    http_server = http_base.createServer(app);
 
-// DEPLOY
-// const io = socket_io(https);
+    // Define cors request for dev
+    app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
+    app.options('*', cors({ credentials: true, origin: 'http://localhost:3000' }));
+}
+
+const io = socket_io(http_server);
 export default io;
 
 logger.debug("Establishing MongoDB connection");
@@ -59,7 +78,9 @@ logger.debug("Establishing MongoDB connection");
 mongoose.connect('mongodb://localhost:' + commander.mongoPort + '/ae', { useNewUrlParser: true, useUnifiedTopology: true });
 
 const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
+
+db.on('error', logger.error.bind(logger));
+
 db.once('open', function() {
     if (commander.purge) {
         const drops: Promise<any>[] = [];
@@ -96,24 +117,19 @@ db.once('open', function() {
     });
     
     // Use http, not app !
-    http.listen(commander.port, () => {
+    http_server.listen(commander.port, () => {
         logger.info(`Archive Explorer Server ${VERSION} is listening on port ${commander.port}`);
     });
-    
-    /* DEPLOY
-    // set up a route to redirect http to https
-    http.get('*', (req, res) => {  
-        res.redirect('https://' + req.headers.host + req.url);
-    });
 
-    // have it listen on 8080
-    http.listen(80);
+    if (commander.prod) {
+        // set up a route to redirect http to https
+        redirector.get('*', (req, res) => {  
+            res.redirect('https://' + req.headers.host + req.url);
+        });
 
-    // Use https, not app !
-    https.listen(443, () => {
-        logger.info(`Archive Explorer Server ${VERSION} is listening on port 443`);
-    });
-    */
+        // have it listen on 8080
+        redirector.listen(80);
+    }
     
     startIo();
 });

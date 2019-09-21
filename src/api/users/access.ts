@@ -92,6 +92,8 @@ route.post('/', (req, res) => {
             if (user === null) {
                 // Création
                 // On enregistre l'utilisateur
+                logger.info(`Creating account for user @${user!.twitter_screen_name}.`);
+
                 user = new UserModel({
                     oauth_token: access.oauth_token,
                     oauth_token_secret: access.oauth_token_secret,
@@ -116,7 +118,7 @@ route.post('/', (req, res) => {
                 user.save();
             }
 
-            logger.debug(`User ${user!.twitter_screen_name} logged and token ${uniq_id} created.`);
+            logger.verbose(`User @${user!.twitter_screen_name} logged and token ${uniq_id} created.`);
 
             // L'utilisateur est prêt !
             res.json({
