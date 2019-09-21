@@ -55,9 +55,6 @@ route.use('/tasks', task_route);
 route.use('/users', users_route);
 route.use('/batch', batch_route);
 
-// DEBUG
-// route.use('/callback_twitter', callback_twitter);
-
 route.all('/', (_, res) => {
     sendError(AEError.invalid_route, res);
 });
