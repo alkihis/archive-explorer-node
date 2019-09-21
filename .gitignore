@@ -6,4 +6,5 @@ static/old_www
 static/www
 log.log
 logs
+deploy/*
 settings.json
