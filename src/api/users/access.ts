@@ -92,7 +92,7 @@ route.post('/', (req, res) => {
             if (user === null) {
                 // Création
                 // On enregistre l'utilisateur
-                logger.info(`Creating account for user @${user!.twitter_screen_name}.`);
+                logger.info(`Creating account for user @${t_user.screen_name}.`);
 
                 user = new UserModel({
                     oauth_token: access.oauth_token,
