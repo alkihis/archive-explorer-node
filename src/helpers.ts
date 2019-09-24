@@ -291,3 +291,30 @@ export async function changeSpecial(user_id: string, special = false) {
         user.save();
     }
 }
+
+export async function purgeCollections(COLLECTIONS: any, db: any, mongoose: any) {
+    const drops: Promise<any>[] = [];
+    for (const collection of Object.keys(COLLECTIONS)) {
+        drops.push(db.db.dropCollection(collection)
+            .then(() => logger.info(`Collection ${collection} dropped.`))
+            .catch(() => logger.warn(`Unable to drop collection ${collection}. (maybe it hasn't been created yet)`)));
+    }
+
+    Promise.all(drops).then(() => db.close()).then(() => {
+        mongoose.disconnect();
+        logger.info("Mongo disconnected. Purge is complete.");
+    });
+}
+
+export async function purgePartial(COLLECTIONS: any, db: any, mongoose: any) {
+    const drops: Promise<any>[] = [];
+    for (const collection of Object.keys(COLLECTIONS)) {
+        drops.push(db.db.dropCollection(collection)
+            .then(() => logger.info(`Collection ${collection} dropped.`))
+            .catch(() => logger.warn(`Unable to drop collection ${collection}. (maybe it hasn't been created yet)`)));
+    }
+
+    Promise.all(drops).then(() => {
+        logger.info("Purge is complete.");
+    });
+}

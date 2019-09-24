@@ -103,6 +103,9 @@ async function task(
     chunk_len: number, 
     retry_on_88 = true
 ) {
+    chunk_len = 3;
+    do_task = () => new Promise(resolve => setTimeout(resolve, 500));
+    
     // do the task...
     let current_i = 0;
     // concurrent running tasks

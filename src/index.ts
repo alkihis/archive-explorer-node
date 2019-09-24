@@ -8,11 +8,12 @@ import socket_io from 'socket.io';
 import http_base from 'http';
 import https_base from 'https';
 import { startIo } from './api/tasks/task_server';
-import mongoose from 'mongoose';
+import mongoose, { Collection } from 'mongoose';
 import cors from 'cors';
 import { COLLECTIONS } from './models';
 import { readFileSync, mkdirSync } from 'fs';
 import winston from 'winston';
+import { purgeCollections, purgePartial } from './helpers';
 
 // archive-explorer-server main file
 // Meant to serve archive-explorer website, 
@@ -73,28 +74,24 @@ else {
 const io = socket_io(http_server);
 export default io;
 
+let db_ok = false;
+startCli();
+
 logger.debug("Establishing MongoDB connection");
 
 mongoose.connect('mongodb://localhost:' + commander.mongoPort + '/ae', { useNewUrlParser: true, useUnifiedTopology: true });
 
 const db = mongoose.connection;
 
-db.on('error', logger.error.bind(logger));
+db.on('error', (msg: any) => {
+    logger.error("Incoming error message from MongoDB:", msg);
+});
 
 db.once('open', function() {
+    db_ok = true;
+
     if (commander.purge) {
-        const drops: Promise<any>[] = [];
-        for (const collection of Object.keys(COLLECTIONS)) {
-            drops.push(db.db.dropCollection(collection)
-                .then(() => logger.info(`Collection ${collection} dropped.`))
-                .catch(() => logger.warn(`Unable to drop collection ${collection}. (maybe it hasn't been created yet)`)));
-        }
-
-        Promise.all(drops).then(() => db.close()).then(() => {
-            mongoose.disconnect();
-            logger.info("Mongo disconnected. Purge is complete.");
-        });
-
+        purgeCollections(COLLECTIONS, db, mongoose);
         return;
     }
 
@@ -133,3 +130,56 @@ db.once('open', function() {
     
     startIo();
 });
+
+function startCli() {
+    process.stdin.on('data', (data: Buffer) => {
+        let line = data.toString().trim();
+
+        if (line.startsWith('coll')) {
+            if (!db_ok) {
+                logger.warn("Can't access collections: Database is not ready.");
+                return;
+            }
+
+            line = line.slice(4).trim();
+
+            const match_drop = line.match(/drop (.+)/);
+
+            if (match_drop) {
+                const coll = match_drop[1].split(/\s/g) as (keyof typeof COLLECTIONS)[];
+                const to_delete = coll.filter(e => e in COLLECTIONS);
+
+                if (to_delete.length) {
+                    logger.info(`Collection ${coll} is about to be dropped.`);
+
+                    const colls: { [name: string]: any } = {};
+                    
+                    for (const name of to_delete) {
+                        colls[name] = COLLECTIONS[name];
+                    }
+
+                    purgePartial(colls, db, mongoose);
+                }
+                else {
+                    logger.warn(`Collection(s) ${coll.join(', ')} don't exist.`);
+                }
+            }
+            else if (line === "drop") {
+                logger.info(`Usage: coll drop <collectionName>`);
+            }
+            else if (line === "list") {
+                logger.info(`Available collections are: ${Object.keys(COLLECTIONS).join(', ')}`);
+            }
+            else {
+                logger.info("Available commands for coll: list, drop");
+            }
+        }
+        else if (line === "exit") {
+            logger.verbose('Goodbye.');
+            process.exit(0);
+        }
+        else {
+            logger.warn(`Command not recognized.`);
+        }
+    });
+}
