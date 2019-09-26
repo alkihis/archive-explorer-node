@@ -4,5 +4,6 @@
   "oauth_callback": "oob",
   "signin_public_key_file": ".ssh/key_new",
   "signin_private_key_file": ".ssh/key_new.pem",
-  "signin_passphrase_key_file": ".ssh/passphrase"
+  "signin_passphrase_key_file": ".ssh/passphrase",
+  "https_key_directory": "/etc/letsencrypt/live/<domain-name>/"
 }

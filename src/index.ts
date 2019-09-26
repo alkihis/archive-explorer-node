@@ -1,6 +1,6 @@
 import express from 'express';
 import commander from 'commander';
-import { VERSION } from './constants';
+import { VERSION, CONFIG_FILE } from './constants';
 import logger from './logger';
 import api_index, { apiErrors } from './api/index';
 import path from 'path';
@@ -8,7 +8,7 @@ import socket_io from 'socket.io';
 import http_base from 'http';
 import https_base from 'https';
 import { startIo } from './api/tasks/task_server';
-import mongoose, { Collection } from 'mongoose';
+import mongoose from 'mongoose';
 import cors from 'cors';
 import { COLLECTIONS } from './models';
 import { readFileSync, mkdirSync } from 'fs';
@@ -38,7 +38,7 @@ let redirector: express.Express;
 let http_server: http_base.Server | https_base.Server;
 
 if (commander.prod) {
-    const SERVER_HTTPS_KEYS = "/etc/letsencrypt/live/archive-explorer.fr/";
+    const SERVER_HTTPS_KEYS = CONFIG_FILE.https_key_directory;
     const credentials = {
         key: readFileSync(SERVER_HTTPS_KEYS + 'privkey.pem', 'utf8'),
         cert: readFileSync(SERVER_HTTPS_KEYS + 'cert.pem', 'utf8'),

@@ -8,3 +8,4 @@ log.log
 logs
 deploy/*
 settings.json
+utils
