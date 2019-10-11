@@ -14,7 +14,7 @@ route.post('/', (_, res) => {
     const data = (new twitter({ 
         consumer_key: CONSUMER_KEY,
         consumer_secret: CONSUMER_SECRET
-    })).getRequestToken(CALLBACK_URL);
+    })).getRequestToken(CALLBACK_URL());
 
     data.then(data => {
         res.json({

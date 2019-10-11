@@ -6,6 +6,8 @@ import api_index, { apiErrors } from './api/index';
 import path from 'path';
 import socket_io from 'socket.io';
 import http_base from 'http';
+// do not work now with spdy (node 11.1+ is not supported)
+// import https_base from 'spdy';
 import https_base from 'https';
 import { startIo } from './api/tasks/task_server';
 import mongoose from 'mongoose';
@@ -18,6 +20,8 @@ import { purgeCollections, purgePartial } from './helpers';
 // archive-explorer-server main file
 // Meant to serve archive-explorer website, 
 // and provide an API in order to delete tweets
+
+export let IS_DEV_MODE = true;
 
 commander
     .version(VERSION)
@@ -38,6 +42,7 @@ let redirector: express.Express;
 let http_server: http_base.Server | https_base.Server;
 
 if (commander.prod) {
+    IS_DEV_MODE = false;
     const SERVER_HTTPS_KEYS = CONFIG_FILE.https_key_directory;
     const credentials = {
         key: readFileSync(SERVER_HTTPS_KEYS + 'privkey.pem', 'utf8'),
