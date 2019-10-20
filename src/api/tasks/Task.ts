@@ -187,6 +187,9 @@ export default class Task {
                 // Termine le worker
                 this.end(false);
             }
+            else if (data.type === "misc") {
+                logger.debug("Worker misc data", data);
+            }
         });
 
         // Envoi de la tâche quand le worker est prêt

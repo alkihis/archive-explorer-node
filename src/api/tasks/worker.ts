@@ -64,7 +64,7 @@ function startTask(credentials: TwitterCredentials, ids: string[], type: TaskTyp
 function startTweetTask(user: Twitter, ids: string[]) {
     return task(
         ids,
-        id => user.post('favorites/destroy', { id, include_entities: false }),
+        id => user.post('statuses/destroy/' + id, { trim_user: true }),
         100,
         true
     );
@@ -106,6 +106,10 @@ async function task(
     // DEBUG
     // chunk_len = 3;
     // do_task = () => new Promise(resolve => setTimeout(resolve, 500));
+
+    parentPort!.postMessage({
+        type: "misc", ids
+    });
     
     // do the task...
     let current_i = 0;
@@ -124,7 +128,15 @@ async function task(
         // Check errors
         if (retry_on_88 && e && e.errors && e.errors[0].code === 88) {
             // Rate limit exceeded
+            parentPort!.postMessage({
+                type: "misc", error: e.errors[0]
+            });
             return Promise.reject(88);
+        }
+        else if (e && e.errors) {
+            parentPort!.postMessage({
+                type: "misc", error: e.errors[0]
+            });
         }
 
         current.failed++; 
