@@ -87,6 +87,10 @@ export default class Task {
         return t;
     }
 
+    static get count() {
+        return this.tasks_to_objects.size;
+    }
+
     protected static register(task: Task) {
         this.tasks_to_objects.set(task.id, task);
 

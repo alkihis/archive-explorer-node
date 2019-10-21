@@ -52,8 +52,8 @@ export function batchTweets(ids: string[]) {
         .then((statuses: ITweet[]) => {
             const obsoletes: ITweet[] = [];
             const current_date_minus = new Date;
-            // Expiration: 3 mois
-            current_date_minus.setMonth(current_date_minus.getMonth() - 3);
+            // Expiration: 2 semaines
+            current_date_minus.setDate(current_date_minus.getDate() - (2 * 7));
 
             // Check the tweets that are obsoletes
             statuses = statuses.filter(e => {
@@ -80,8 +80,8 @@ export function batchUsers(ids: string[]) {
         .then((users: ITwitterUser[]) => {
             const obsoletes: ITwitterUser[] = [];
             const current_date_minus = new Date;
-            // Expiration: 15 jours
-            current_date_minus.setDate(current_date_minus.getDate() - 15);
+            // Expiration: 1 jour
+            current_date_minus.setDate(current_date_minus.getDate() - 1);
 
             // Check the tweets that are obsoletes
             users = users.filter(e => {

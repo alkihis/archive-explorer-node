@@ -16,6 +16,7 @@ import { COLLECTIONS } from './models';
 import { readFileSync, mkdirSync } from 'fs';
 import winston from 'winston';
 import { purgeCollections, purgePartial } from './helpers';
+import Task from './api/tasks/Task';
 
 // archive-explorer-server main file
 // Meant to serve archive-explorer website, 
@@ -182,6 +183,9 @@ function startCli() {
         else if (line === "exit") {
             logger.verbose('Goodbye.');
             process.exit(0);
+        }
+        else if (line === "task") {
+            logger.info("There are " + Task.count + " running tasks");
         }
         else {
             logger.warn(`Command not recognized.`);
