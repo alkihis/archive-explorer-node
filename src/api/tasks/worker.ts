@@ -15,7 +15,7 @@ interface WorkerTask {
     task_type: TaskType
 }
 
-type TaskType = "tweet" | "mute" | "block" | "fav";
+type TaskType = "tweet" | "mute" | "block" | "fav" | "dm";
 
 let authorized = true;
 
@@ -56,6 +56,8 @@ function startTask(credentials: TwitterCredentials, ids: string[], type: TaskTyp
             return startBlockTask(user, ids);
         case "mute":
             return startMuteTask(user, ids);
+        case "dm":
+            return startDmTask(user, ids);
         default:
             return Promise.reject("Unexpected task type");
     }
@@ -93,6 +95,15 @@ function startMuteTask(user: Twitter, ids: string[]) {
         ids,
         id => user.post('mutes/users/destroy', { user_id: id }),
         75,
+        true
+    );
+}
+
+function startDmTask(user: Twitter, ids: string[]) {
+    return task(
+        ids,
+        id => user.delete('direct_messages/events/destroy', { id }),
+        100,
         true
     );
 }

@@ -22,7 +22,9 @@ declare module 'twitter-lite' {
         });
 
         get(url: string, parameters?: { [key: string]: any }): Promise<any>;
+        delete(url: string, parameters?: { [key: string]: any }): Promise<any>;
         post(url: string, parameters?: { [key: string]: any }): Promise<any>;
+
         stream(url: string, parameters?: { [key: string]: any }): TwitterStream;
 
         getBearerToken(): Promise<{ access_token: string, access_token_secret: string }>;

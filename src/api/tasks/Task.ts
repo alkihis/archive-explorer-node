@@ -44,10 +44,10 @@ interface Credentials {
     oauth_token_secret: string;
 }
 
-export type TaskType = "tweet" | "mute" | "block" | "fav";
+export type TaskType = "tweet" | "mute" | "block" | "fav" | "dm";
 
 export function isValidTaskType(type: string) : type is TaskType {
-    return type === "tweet" || type === "mute" || type === "block" || type === "fav";
+    return type === "tweet" || type === "mute" || type === "block" || type === "fav" || type === "dm";
 }
 
 export default class Task {
