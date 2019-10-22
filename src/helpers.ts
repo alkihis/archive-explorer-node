@@ -66,7 +66,8 @@ export function batchTweets(ids: string[]) {
             })
 
             // Delete obsoletes tweets
-            TweetModel.deleteMany({ id: { $in: obsoletes.map(e => e.id_str) } });
+            // TweetModel.deleteMany({ id: { $in: obsoletes.map(e => e.id_str) } });
+            TweetModel.deleteMany({ inserted_time: { $lte: current_date_minus } });
 
             // Return valids
             return statuses;
@@ -94,7 +95,8 @@ export function batchUsers(ids: string[]) {
             })
 
             // Delete obsoletes tweets
-            TwitterUserModel.deleteMany({ id: { $in: obsoletes.map(e => e.id_str) } });
+            // TwitterUserModel.deleteMany({ id: { $in: obsoletes.map(e => e.id_str) } });
+            TwitterUserModel.deleteMany({ inserted_time: { $lte: current_date_minus } });
 
             // Return valids
             return users;
