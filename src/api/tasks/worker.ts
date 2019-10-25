@@ -139,15 +139,15 @@ async function task(
         // Check errors
         if (retry_on_88 && e && e.errors && e.errors[0].code === 88) {
             // Rate limit exceeded
-            parentPort!.postMessage({
-                type: "misc", error: e.errors[0]
-            });
+            // parentPort!.postMessage({
+            //     type: "misc", error: e.errors[0]
+            // });
             return Promise.reject(88);
         }
         else if (e && e.errors) {
-            parentPort!.postMessage({
-                type: "misc", error: e.errors[0]
-            });
+            // parentPort!.postMessage({
+            //     type: "misc", error: e.errors[0]
+            // });
         }
 
         current.failed++; 
