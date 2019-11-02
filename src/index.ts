@@ -1,6 +1,6 @@
 import express from 'express';
 import commander from 'commander';
-import { VERSION, CONFIG_FILE } from './constants';
+import { VERSION, CONFIG_FILE, TweetCounter } from './constants';
 import logger from './logger';
 import api_index, { apiErrors } from './api/index';
 import path from 'path';
@@ -182,6 +182,7 @@ function startCli() {
         }
         else if (line === "exit") {
             logger.verbose('Goodbye.');
+            TweetCounter.sync();
             process.exit(0);
         }
         else if (line === "task") {

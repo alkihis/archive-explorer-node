@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import { Worker } from 'worker_threads';
 import logger from "../../logger";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
+import { TweetCounter } from "../../constants";
 
 export interface TaskProgression {
     percentage: number;
@@ -178,6 +179,9 @@ export default class Task {
             if (data.type === "info") {
                 // Envoi d'un message de progression de la suppression
                 this.done += data.info!.done;
+                // Incrémente le compteur
+                TweetCounter.inc(data.info!.done);
+                
                 this.remaining -= (data.info!.done + data.info!.failed);
                 this.failed += data.info!.failed;
 

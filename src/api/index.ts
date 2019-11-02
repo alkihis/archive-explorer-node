@@ -3,14 +3,12 @@ import AEError, { sendError } from '../errors';
 import task_route from './tasks/index';
 import users_route from './users/index';
 import batch_route from './batch/index';
-import callback_twitter from './users/callback_twitter';
 import jwt from 'express-jwt';
-import { SECRET_PUBLIC_KEY } from '../constants';
+import { SECRET_PUBLIC_KEY, TweetCounter } from '../constants';
 import { JSONWebToken } from '../interfaces';
 import { isTokenInvalid } from '../helpers';
 import bodyParser from 'body-parser';
 import logger from '../logger';
-import { IToken } from '../models';
 
 const route = Router();
 
@@ -25,7 +23,7 @@ route.use(
                 .catch(e => { logger.error("Unable to check token validity", e); done(e); });
         }
     }).unless(
-        { path: ["/api/users/request.json", "/api/users/access.json", "/api/callback_twitter", "/api"] }
+        { path: ["/api/users/request.json", "/api/users/access.json", "/api/callback_twitter", "/api", "/api/deleted_count.json"] }
     )
 );
 
@@ -54,6 +52,9 @@ route.use(mongoSanitize({
 route.use('/tasks', task_route);
 route.use('/users', users_route);
 route.use('/batch', batch_route);
+route.get('/deleted_count.json', (_, res) => {
+    res.json({ count: TweetCounter.count });
+});
 
 route.all('/', (_, res) => {
     sendError(AEError.invalid_route, res);
