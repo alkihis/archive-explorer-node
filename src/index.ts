@@ -3,7 +3,6 @@ import commander from 'commander';
 import { VERSION, CONFIG_FILE, TweetCounter } from './constants';
 import logger from './logger';
 import api_index, { apiErrors } from './api/index';
-import path from 'path';
 import socket_io from 'socket.io';
 import http_base from 'http';
 // do not work now with spdy (node 11.1+ is not supported)
@@ -17,6 +16,7 @@ import { readFileSync, mkdirSync } from 'fs';
 import winston from 'winston';
 import { purgeCollections, purgePartial } from './helpers';
 import Task from './api/tasks/Task';
+import StaticServer from './static_server';
 
 // archive-explorer-server main file
 // Meant to serve archive-explorer website, 
@@ -109,11 +109,8 @@ db.once('open', function() {
     
     logger.debug("Serving static website");
     // File should be in build/
-    app.use('/', express.static(path.join(__dirname, "../static/www")));
-    app.use('*', (_, response) => {
-        response.sendFile(path.join(__dirname, "../static/www/index.html"));
-    });
-
+    app.use(StaticServer);
+    
     // 404 not found for all others pages
     app.use((_, res) => {
         res.status(404).send();

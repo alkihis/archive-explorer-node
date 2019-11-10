@@ -1,6 +1,8 @@
 import { parentPort } from 'worker_threads';
 import Twitter from 'twitter-lite';
 
+const DEBUG = false;
+
 interface TwitterCredentials {
     consumer_token: string;
     consumer_secret: string;
@@ -115,12 +117,14 @@ async function task(
     retry_on_88 = true
 ) {
     // DEBUG
-    // chunk_len = 3;
-    // do_task = () => new Promise(resolve => setTimeout(resolve, 500));
-
-    parentPort!.postMessage({
-        type: "misc", ids
-    });
+    if (DEBUG) {
+        chunk_len = 3;
+        do_task = () => new Promise(resolve => setTimeout(resolve, 500));
+    
+        parentPort!.postMessage({
+            type: "misc", ids
+        });
+    }
     
     // do the task...
     let current_i = 0;
