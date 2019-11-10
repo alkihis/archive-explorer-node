@@ -103,6 +103,16 @@ db.once('open', function() {
 
     logger.verbose("MongoDB connection is open");
 
+    // tmp redirect to .com
+    app.use('*', (req, res, next) => {
+        if (req.hostname.includes('archive-explorer.fr')) {
+            res.redirect(301, 'https://archive-explorer.com');
+        }
+        else {
+            next();
+        }
+    });
+
     logger.debug("Serving API");
     app.use('/api', api_index);
     app.use('/api', apiErrors);
@@ -127,7 +137,7 @@ db.once('open', function() {
             res.redirect('https://' + req.headers.host + req.url);
         });
 
-        // have it listen on 8080
+        // have it listen on 80
         redirector.listen(80);
     }
     
