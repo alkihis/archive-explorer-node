@@ -55,10 +55,10 @@ mkdir .ssh
 cd .ssh
 
 # Generating private key (do not forget to enter a passphrase when asked)
-openssl genpkey -aes-256-cbc -algorithm RSA -out key_new.pem -pkeyopt rsa_keygen_bits:2048
+ssh-keygen -t rsa -b 4096 -m PEM -f key_new.pem
 
 # Generating public key
-openssl rsa -pubout -in key_new.pem -out key_new
+openssl rsa -in key_new.pem -pubout -outform PEM -out key_new
 
 # Register the passphrase in the file "passphrase"
 echo "my_choosen_passphrase" > passphrase
