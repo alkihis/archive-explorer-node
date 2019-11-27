@@ -4,6 +4,8 @@ Serve requests for the Archive Explorer project.
 
 This is the back-end side of the Archive Explorer project. See [archive-explorer-web](https://github.com/alkihis/archive-explorer-web) for the front-end website.
 
+Website is available in [archive-explorer.com](https://archive-explorer.com) !
+
 ## Foreword
 
 None of the pages served to clients are server-side rendered. This server provides **static** access to the bundled React website, and gives access to an API developed with the **Express** framework.
