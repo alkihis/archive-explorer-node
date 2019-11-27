@@ -89,4 +89,7 @@ You can ask for help with `--help`.
 
 ## Deploy
 
-To deploy server, you need to provide some changes to `index.ts` in order to emit over HTTPS to the right ports.
+By default, server will emit to port 443 (HTTPS).
+You just need to specify `--prod` argument to `build/index.js`.
+
+Certificates should be in directory mentionned in settings.json's `https_key_directory`. It assume you will use Let's Encrypt.
