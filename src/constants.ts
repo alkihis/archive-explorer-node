@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "fs";
+import logger from "./logger";
 
 export const VERSION = "1.2.1";
 export const CONFIG_FILE = JSON.parse(readFileSync(__dirname + "/../settings.json", "utf-8"));
@@ -8,7 +9,12 @@ export const TweetCounter = new class {
   protected timer: NodeJS.Timeout | undefined;
 
   constructor() {
-    this.count_file = JSON.parse(readFileSync(this.filename, "utf-8"));
+    try {
+      this.count_file = JSON.parse(readFileSync(this.filename, "utf-8"));
+    } catch (e) {
+      logger.info("Count file does not exists, creating misc/" + this.filename + "...");
+      this.count_file = { deleted: 0 };
+    }
   }
 
   inc(of_amount: number = 1) {
