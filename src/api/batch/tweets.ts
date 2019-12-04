@@ -35,6 +35,8 @@ route.post('/', (req, res) => {
       // array diff
       const to_retrieve = ids.filter(e => !ids_existings.has(e));
 
+      let error = false;
+
       if (to_retrieve.length) {
         logger.debug(`Batching ${to_retrieve.length} tweets from Twitter`);
 
@@ -63,7 +65,10 @@ route.post('/', (req, res) => {
           // Save every tweet in mangoose (and catch insert errors)
           .then((statuses: Status[]) => saveTweets(statuses).catch(() => sendError(AEError.server_error, res)))
           // Otherwise, send Twitter error
-          .catch(e => sendTwitterError(e, res));
+          .catch(e => {
+            sendTwitterError(e, res);
+            error = true;
+          });
 
         if (twitter_tweets) {
           existings.push(...twitter_tweets);
@@ -71,7 +76,8 @@ route.post('/', (req, res) => {
       }
 
       // Send response
-      res.json(existings.map(e => sanitizeMongoObj(e)));
+      if (!error)
+        res.json(existings.map(e => sanitizeMongoObj(e)));
     })().catch(e => {
       logger.error("Batch error", e);
       sendError(AEError.server_error, res);

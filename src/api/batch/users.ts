@@ -33,6 +33,7 @@ route.post('/', (req, res) => {
 
       // array diff
       const to_retrieve = ids.filter(e => !ids_existings.has(e));
+      let error = false;
 
       if (to_retrieve.length) {
         logger.debug(`Batching ${to_retrieve.length} users from Twitter`);
@@ -65,6 +66,7 @@ route.post('/', (req, res) => {
             }
 
             sendTwitterError(e, res);
+            error = true;
           });
 
         if (twitter_users) {
@@ -73,7 +75,8 @@ route.post('/', (req, res) => {
       }
 
       // Send response
-      res.json(existings.map(e => sanitizeMongoObj(e)));
+      if (!error)
+        res.json(existings.map(e => sanitizeMongoObj(e)));
     })().catch(e => {
       logger.error("Batch error", e);
       sendError(AEError.server_error, res);
