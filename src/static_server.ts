@@ -51,7 +51,7 @@ function serveHtmlMiddleware(req: express.Request, res: express.Response, next: 
             .then(d => {
                 logger.debug("Serving page for lang " + lang);
                 let real_lang = lang;
-                if (lang.includes('_')) {
+                if (lang && lang.includes('_')) {
                     real_lang = lang.split('_')[0];
                 }
 

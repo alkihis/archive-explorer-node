@@ -4,6 +4,8 @@ Serve requests for the Archive Explorer project.
 
 This is the back-end side of the Archive Explorer project. See [archive-explorer-web](https://github.com/alkihis/archive-explorer-web) for the front-end website.
 
+Website is available in [archive-explorer.com](https://archive-explorer.com) !
+
 ## Foreword
 
 None of the pages served to clients are server-side rendered. This server provides **static** access to the bundled React website, and gives access to an API developed with the **Express** framework.
@@ -55,10 +57,10 @@ mkdir .ssh
 cd .ssh
 
 # Generating private key (do not forget to enter a passphrase when asked)
-openssl genpkey -aes-256-cbc -algorithm RSA -out key_new.pem -pkeyopt rsa_keygen_bits:2048
+ssh-keygen -t rsa -b 4096 -m PEM -f key_new.pem
 
 # Generating public key
-openssl rsa -pubout -in key_new.pem -out key_new
+openssl rsa -in key_new.pem -pubout -outform PEM -out key_new
 
 # Register the passphrase in the file "passphrase"
 echo "my_choosen_passphrase" > passphrase
@@ -89,4 +91,7 @@ You can ask for help with `--help`.
 
 ## Deploy
 
-To deploy server, you need to provide some changes to `index.ts` in order to emit over HTTPS to the right ports.
+By default, server will emit to port 443 (HTTPS).
+You just need to specify `--prod` argument to `build/index.js`.
+
+Certificates should be in directory mentionned in settings.json's `https_key_directory`. It assume you will use Let's Encrypt.

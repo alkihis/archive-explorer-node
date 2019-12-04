@@ -105,7 +105,7 @@ db.once('open', function() {
 
     // tmp redirect to .com
     app.use('*', (req, res, next) => {
-        if (req.hostname.includes('archive-explorer.fr')) {
+        if (req.hostname && req.hostname.includes('archive-explorer.fr')) {
             res.redirect(301, 'https://archive-explorer.com');
         }
         else {
