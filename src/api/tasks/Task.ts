@@ -259,8 +259,7 @@ export default class Task {
         // Unregister task from Maps
         Task.unregister(this);
 
-
-        logger.verbose(`Task ${this.id} has ended`);
+        logger.info(`Task #${this.id} has ended`);
     }
 
     get current_progression() {
@@ -269,6 +268,10 @@ export default class Task {
 
     get owner() {
         return this.user.user_id;
+    }
+
+    get length() {
+        return this.done + this.remaining + this.failed;
     }
 
     protected emit(progression: TaskProgression) {

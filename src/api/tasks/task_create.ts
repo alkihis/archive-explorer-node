@@ -38,12 +38,16 @@ route.post('/', (req, res) => {
             const ids = (req.body.ids as string).split(',');
 
             if (ids.length) {
+                logger.info(`Creation of task of type "${req.body.type}" for user @${user.twitter_screen_name}`);
+
                 // Création tâche (elle s'enregistre correctement automatiquement)
                 const task = new Task(ids, {
                     user_id: user.user_id,
                     oauth_token: user.oauth_token,
                     oauth_token_secret: user.oauth_token_secret
                 }, req.body.type);
+
+                logger.info(`Elements for task #${task.id} : ${ids.length}`);
 
                 res.json({ status: true, task: String(task.id) });
             }
