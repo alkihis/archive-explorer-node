@@ -18,15 +18,19 @@ export function methodNotAllowed(allow: string | string[]) {
 }
 
 export function sanitizeMongoObj<T extends Mongoose.Document>(data: T) : any {
-    const original_clean = data.toJSON();
-
-    for (const prop in original_clean) {
-        if (prop.startsWith('_')) {
-            delete original_clean[prop];
+    try {
+        const original_clean = data.toJSON();
+    
+        for (const prop in original_clean) {
+            if (prop.startsWith('_')) {
+                delete original_clean[prop];
+            }
         }
-    }
+    
+        return original_clean;
+    } catch {}
 
-    return original_clean;
+    return data;
 }
 
 export function getUserFromToken(token: string) {

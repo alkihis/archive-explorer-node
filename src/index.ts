@@ -2,11 +2,9 @@ import express from 'express';
 import commander from 'commander';
 import { VERSION, CONFIG_FILE, TweetCounter } from './constants';
 import logger from './logger';
-import api_index, { apiErrors } from './api/index';
+import APIIndex, { apiErrors as APIErrors } from './api/index';
 import socket_io from 'socket.io';
 import http_base from 'http';
-// do not work now with spdy (node 11.1+ is not supported)
-// import https_base from 'spdy';
 import https_base from 'https';
 import { startIo } from './api/tasks/task_server';
 import mongoose from 'mongoose';
@@ -114,8 +112,8 @@ db.once('open', function() {
     });
 
     logger.debug("Serving API");
-    app.use('/api', api_index);
-    app.use('/api', apiErrors);
+    app.use('/api', APIIndex);
+    app.use('/api', APIErrors);
     
     logger.debug("Serving static website");
     // File should be in build/
