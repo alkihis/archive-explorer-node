@@ -169,7 +169,7 @@ function startCli() {
                         colls[name] = COLLECTIONS[name];
                     }
 
-                    purgePartial(colls, db, mongoose);
+                    purgePartial(colls, db);
                 }
                 else {
                     logger.warn(`Collection(s) ${coll.join(', ')} don't exist.`);

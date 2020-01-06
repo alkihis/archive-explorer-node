@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { invalidateToken, methodNotAllowed, getUserFromToken } from "../../helpers";
+import { invalidateToken, methodNotAllowed, getTokenInstanceFromString } from "../../helpers";
 import logger from "../../logger";
 import AEError, { sendError } from "../../errors";
 
@@ -10,7 +10,7 @@ route.post('/', (req, res) => {
 
     // Checking the authenticity of desired token
     (async () => {
-        const full_token = await getUserFromToken(token);
+        const full_token = await getTokenInstanceFromString(token);
 
         if (!full_token) {
             sendError(AEError.inexistant, res);

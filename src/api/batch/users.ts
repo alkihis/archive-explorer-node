@@ -36,6 +36,12 @@ route.post('/', (req, res) => {
       let error = false;
 
       if (to_retrieve.length) {
+        // Max 100 users allowed
+        if (to_retrieve.length > 100) {
+          sendError(AEError.invalid_request, res);
+          return;
+        }
+
         logger.debug(`Batching ${to_retrieve.length} users from Twitter`);
 
         const bdd_user = await getCompleteUserFromId(req.user!.user_id);
@@ -57,7 +63,10 @@ route.post('/', (req, res) => {
         // Batch tweets using lookup endpoint (100 max)
         const twitter_users = await user.post('users/lookup', { user_id: to_retrieve.join(','), include_entities: true })
           // Save every tweet in mangoose (and catch insert errors)
-          .then((users: FullUser[]) => saveTwitterUsers(users).catch(() => sendError(AEError.server_error, res)))
+          .then((users: FullUser[]) => saveTwitterUsers(users).catch(e => {
+            logger.error("Unable to save users.", e);
+            sendError(AEError.server_error, res);
+          }))
           // Otherwise, send Twitter error
           .catch(e => {
             if (e.errors && e.errors[0].code === 17) {

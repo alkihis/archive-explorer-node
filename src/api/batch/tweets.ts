@@ -38,6 +38,12 @@ route.post('/', (req, res) => {
       let error = false;
 
       if (to_retrieve.length) {
+        // Max 100 tweets allowed
+        if (to_retrieve.length > 100) {
+          sendError(AEError.invalid_request, res);
+          return;
+        }
+
         logger.debug(`Batching ${to_retrieve.length} tweets from Twitter`);
 
         const bdd_user = await getCompleteUserFromId(req.user!.user_id);
@@ -63,7 +69,10 @@ route.post('/', (req, res) => {
           tweet_mode: "extended" 
         })
           // Save every tweet in mangoose (and catch insert errors)
-          .then((statuses: Status[]) => saveTweets(statuses).catch(() => sendError(AEError.server_error, res)))
+          .then((statuses: Status[]) => saveTweets(statuses).catch(e => {
+            logger.error("Unable to save tweets.", e);
+            sendError(AEError.server_error, res);
+          }))
           // Otherwise, send Twitter error
           .catch(e => {
             sendTwitterError(e, res);

@@ -1,7 +1,7 @@
 import { UserModel, TokenModel, IUser, TweetModel, ITweet, TwitterUserModel, ITwitterUser } from "./models";
 import { SECRET_PRIVATE_KEY, SECRET_PASSPHRASE, SECRET_PUBLIC_KEY } from "./constants";
-import jsonwebtoken from 'jsonwebtoken';
-import twitterLite from "twitter-lite";
+import JsonWebToken from 'jsonwebtoken';
+import TwitterLite from "twitter-lite";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "./twitter_const";
 import express from 'express';
 import Mongoose from "mongoose";
@@ -33,7 +33,7 @@ export function sanitizeMongoObj<T extends Mongoose.Document>(data: T) : any {
     return data;
 }
 
-export function getUserFromToken(token: string) {
+export function getTokenInstanceFromString(token: string) {
     return TokenModel.findOne({ token });
 }
 
@@ -50,59 +50,39 @@ export function getCompleteUserFromTwitterId(twitter_id: string) {
 }
 
 export function batchTweets(ids: string[]) {
-    logger.debug(`Batching ${ids.length} tweets from local MongoDB`);
-
     return TweetModel.find({ id_str: { $in: ids } })
         .then((statuses: ITweet[]) => {
-            const obsoletes: ITweet[] = [];
             const current_date_minus = new Date;
             // Expiration: 2 semaines
             current_date_minus.setDate(current_date_minus.getDate() - (2 * 7));
 
             // Check the tweets that are obsoletes
-            statuses = statuses.filter(e => {
-                // Check if moins de 3 mois
-                if (e.inserted_time.getTime() < current_date_minus.getTime()) {
-                    obsoletes.push(e);
-                    return false;
-                }
-                return true;
-            })
+            statuses = statuses.filter(e => e.inserted_time.getTime() >= current_date_minus.getTime());
 
             // Delete obsoletes tweets
-            // TweetModel.deleteMany({ id: { $in: obsoletes.map(e => e.id_str) } });
             TweetModel.deleteMany({ inserted_time: { $lte: current_date_minus } });
 
             // Return valids
+            logger.debug(`${statuses.length} valid tweets batched from MongoDB (${ids.length} fetched)`);
             return statuses;
         });
 }
 
 export function batchUsers(ids: string[]) {
-    logger.debug(`Batching ${ids.length} users from local MongoDB`);
-
     return TwitterUserModel.find({ id_str: { $in: ids } })
         .then((users: ITwitterUser[]) => {
-            const obsoletes: ITwitterUser[] = [];
             const current_date_minus = new Date;
             // Expiration: 1 jour
             current_date_minus.setDate(current_date_minus.getDate() - 1);
 
             // Check the tweets that are obsoletes
-            users = users.filter(e => {
-                // Check if moins de 3 mois
-                if (e.inserted_time.getTime() < current_date_minus.getTime()) {
-                    obsoletes.push(e);
-                    return false;
-                }
-                return true;
-            })
+            users = users.filter(e => e.inserted_time.getTime() >= current_date_minus.getTime());
 
             // Delete obsoletes tweets
-            // TwitterUserModel.deleteMany({ id: { $in: obsoletes.map(e => e.id_str) } });
             TwitterUserModel.deleteMany({ inserted_time: { $lte: current_date_minus } });
 
             // Return valids
+            logger.debug(`${users.length} valid Twitter users batched from MongoDB (${ids.length} fetched)`);
             return users;
         });
 }
@@ -111,7 +91,7 @@ export function saveTweets(tweets: Status[]) {
     return TweetModel.insertMany(
         tweets
             .map(e => suppressUselessTweetProperties(e))
-            .map(t => { return {...t, inserted_time: new Date}; })
+            .map(t => ({ ...t, inserted_time: new Date }))
     );
 }
 
@@ -119,7 +99,7 @@ export function saveTwitterUsers(users: FullUser[]) {
     return TwitterUserModel.insertMany(
         users
             .map(u => suppressUselessTUserProperties(u))
-            .map(u => { return {...u, inserted_time: new Date}; })
+            .map(u => ({ ...u, inserted_time: new Date }))
     );
 }
 
@@ -132,7 +112,7 @@ export function invalidateTokensFromUser(user_id: string) {
 }
 
 export function isTokenInvalid(token: string, res?: express.Request) {
-    return getUserFromToken(token)
+    return getTokenInstanceFromString(token)
         .then(model => {
             if (model) {
                 // Actualise le last_use
@@ -152,10 +132,10 @@ export function isTokenInvalid(token: string, res?: express.Request) {
 
 export async function checkToken(token: string) {
     const decoded: JSONWebToken = await new Promise((resolve, reject) => {
-        jsonwebtoken.verify(token, SECRET_PUBLIC_KEY, (err, data) => {
+        JsonWebToken.verify(token, SECRET_PUBLIC_KEY, (err, data) => {
             if (err) reject(err);
             resolve(data as any);
-        })
+        });
     });
     
     if (await isTokenInvalid(decoded.jti)) {
@@ -172,7 +152,7 @@ export function removeUser(user: IUser) {
 export function signToken(payload: TokenPayload, id: string) {
     return new Promise((resolve, reject) => {
         // Signe le token
-        jsonwebtoken.sign(
+        JsonWebToken.sign(
             payload, // Données custom
             { key: SECRET_PRIVATE_KEY, passphrase: SECRET_PASSPHRASE }, // Clé RSA privée
             { 
@@ -190,7 +170,7 @@ export function signToken(payload: TokenPayload, id: string) {
 }
 
 export function createTwitterObjectFromUser(user: IUser) {
-    return new twitterLite({
+    return new TwitterLite({
         consumer_key: CONSUMER_KEY,
         consumer_secret: CONSUMER_SECRET,
         access_token_key: user.oauth_token,
@@ -312,7 +292,7 @@ export async function purgeCollections(COLLECTIONS: any, db: any, mongoose: any)
     });
 }
 
-export async function purgePartial(COLLECTIONS: any, db: any, mongoose: any) {
+export async function purgePartial(COLLECTIONS: any, db: any) {
     const drops: Promise<any>[] = [];
     for (const collection of Object.keys(COLLECTIONS)) {
         drops.push(db.db.dropCollection(collection)

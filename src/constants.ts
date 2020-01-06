@@ -41,8 +41,15 @@ export const TweetCounter = new class {
   }
 };
 
+const passphrase_file = __dirname + "/../" + CONFIG_FILE.signin_passphrase_key_file;
+let real_passphrase: string = "";
+// Try to get passphrase
+try {
+  real_passphrase = readFileSync(passphrase_file, "utf-8").trimRight();
+} catch {}
+
 export const SECRET_PUBLIC_KEY = readFileSync(__dirname + "/../" + CONFIG_FILE.signin_public_key_file, "utf-8");
 export const SECRET_PRIVATE_KEY = readFileSync(__dirname + "/../" + CONFIG_FILE.signin_private_key_file, "utf-8");
-export const SECRET_PASSPHRASE = readFileSync(__dirname + "/../" + CONFIG_FILE.signin_passphrase_key_file, "utf-8").trimRight();
+export const SECRET_PASSPHRASE = real_passphrase;
 export const MAX_TASK_PER_USER = 3;
 export const MAX_TASK_PER_USER_SPECIAL = 10;

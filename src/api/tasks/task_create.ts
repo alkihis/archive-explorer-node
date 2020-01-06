@@ -44,7 +44,8 @@ route.post('/', (req, res) => {
                 const task = new Task(ids, {
                     user_id: user.user_id,
                     oauth_token: user.oauth_token,
-                    oauth_token_secret: user.oauth_token_secret
+                    oauth_token_secret: user.oauth_token_secret,
+                    screen_name: user.twitter_screen_name,
                 }, req.body.type);
 
                 logger.info(`Elements for task #${task.id} : ${ids.length}`);
