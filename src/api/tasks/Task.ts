@@ -20,6 +20,7 @@ interface WorkerTask {
     credentials: TwitterCredentials, 
     tweets: string[],
     task_type: TaskType,
+    debug?: boolean,
 }
 
 interface WorkerMessage {
@@ -53,6 +54,7 @@ export function isValidTaskType(type: string) : type is TaskType {
 }
 
 export default class Task {
+    // @ts-ignore
     protected static current_id = 1n;
     // Key is Task ID
     protected static readonly tasks_to_objects: Map<BigInt, Task> = new Map;
@@ -67,6 +69,10 @@ export default class Task {
         }
 
         return this.tasks_to_objects.get(id);
+    }
+
+    static exists(id: string | BigInt) {
+        return this.get(id) !== undefined;
     }
 
     static tasksOf(user_id: string) {
@@ -93,6 +99,12 @@ export default class Task {
 
     static get count() {
         return this.tasks_to_objects.size;
+    }
+
+    static *all() {
+        for (const [, tasks] of this.users_to_tasks) {
+            yield* tasks;
+        }
     }
 
     protected static register(task: Task) {
@@ -133,7 +145,7 @@ export default class Task {
 
     protected last: TaskProgression;
 
-    protected twitter_errors_encountered: { [code: string]: number } = {};
+    protected twitter_errors_encountered: { [code: string]: [number, string] } = {};
 
     constructor(
         items_ids: string[],
@@ -141,16 +153,12 @@ export default class Task {
         public readonly type: TaskType,
         thread_number: number = Task.DEFAULT_THREAD_NUMBER,
     ) { 
-        // Register the this object for callbacks
-        // TODO test
-        this.onWorkerMessage = this.onWorkerMessage.bind(this);
-
         // Auto increment internal ID
         const c = Task.current_id;
         Task.current_id++;
         this.id = c;
 
-        logger.verbose(`Starting task ${c} with ${items_ids.length} items to delete`);
+        logger.info(`Creation of task #${this.id}, type "${type}" for user @${user.screen_name} (${items_ids.length} elements)`);
 
         this.last = {
             id: String(this.id),
@@ -175,78 +183,13 @@ export default class Task {
             this.startWorker(items_ids);
         }
         else {
-            const part_count = Math.ceil(items_ids.length / thread_number);
+            const chunk_length = Math.ceil(items_ids.length / thread_number);
             let i = 0;
             let items_ids_part: string[];
     
-            while ((items_ids_part = items_ids.slice(i * part_count, (i+1) * part_count)).length) {
+            while ((items_ids_part = items_ids.slice(i, i + chunk_length)).length) {
                 this.startWorker(items_ids_part);
-                i++;
-            }
-        }
-    }
-
-    protected startWorker(items: string[]) {
-        logger.silly(`Task #${this.id}: Starting worker ${this.pool.length + 1}.`);
-
-        const worker = new Worker(__dirname + '/task_worker/worker.js');
-        const task_to_worker: WorkerTask = {
-            tweets: items,
-            credentials: { 
-                consumer_token: CONSUMER_KEY, 
-                consumer_secret: CONSUMER_SECRET, 
-                oauth_token: this.user.oauth_token, 
-                oauth_token_secret: this.user.oauth_token_secret
-            },
-            type: "task",
-            task_type: this.type
-        };
-
-        // Assignation des listeners
-        worker.on('message', this.onWorkerMessage);
-
-        // Envoi de la tâche quand le worker est prêt
-        worker.once('online', () => {
-            worker.postMessage(task_to_worker);
-        });
-
-        this.pool.push(worker);
-    }
-
-    protected onWorkerMessage(data: WorkerMessage) {
-        logger.silly("Recieved message from worker:", data);
-
-        if (data.type === "info") {
-            // Envoi d'un message de progression de la suppression
-            this.done += data.info!.done;
-
-            // Incrémente le compteur si la tâche est de type tweet
-            if (this.type === "tweet")
-                TweetCounter.inc(data.info!.done);
-            
-            this.remaining -= (data.info!.done + data.info!.failed);
-            this.failed += data.info!.failed;
-
-            this.emitProgress(this.done, this.remaining, this.failed);
-        }
-        else if (data.type === "end") {
-            this.end();
-        }
-        else if (data.type === "error") {
-            this.emitError(data.error);
-            // Termine le worker
-            this.end(false);
-        }
-        else if (data.type === "misc") {
-            logger.debug("Worker misc data", data);
-        }
-        else if (data.type === "twitter_error") {
-            const error = data.error as number;
-            if (error in this.twitter_errors_encountered) {
-                this.twitter_errors_encountered[error]++;
-            }
-            else {
-                this.twitter_errors_encountered[error] = 1;
+                i += chunk_length;
             }
         }
     }
@@ -305,9 +248,9 @@ export default class Task {
         logger.info(`Task #${this.id} has ended. Type ${this.type}, from @${this.user.screen_name}, ${this.done} ok + ${this.failed} failed of ${this.length} (Remaining ${this.remaining})`);
         
         if (this.has_twitter_errors_encountered) {
-            logger.warn(`Twitter errors has been encountered: ${
+            logger.warn(`Task #${this.id}: Twitter errors has been encountered: ${
                 Object.entries(this.twitter_errors_encountered)
-                    .map(([code, count]) => `#${code} (${count})`)
+                    .map(([code, count]) => `code ${code} '${count[1]}' [${count[0]} times]`)
                     .join(', ')
             }`);
         }
@@ -321,12 +264,98 @@ export default class Task {
         return this.user.user_id;
     }
 
+    get owner_screen_name() {
+        return this.user.screen_name!;
+    }
+
+    get worker_count() {
+        return this.pool.length;
+    }
+
     get length() {
         return this.done + this.remaining + this.failed;
     }
 
     get has_twitter_errors_encountered() {
         return Object.keys(this.twitter_errors_encountered).length > 0;
+    }
+
+    protected startWorker(items: string[]) {
+        logger.silly(`Task #${this.id}: Starting worker ${this.pool.length + 1}.`);
+
+        const worker = new Worker(__dirname + '/task_worker/worker.js');
+        const task_to_worker: WorkerTask = {
+            tweets: items,
+            credentials: { 
+                consumer_token: CONSUMER_KEY, 
+                consumer_secret: CONSUMER_SECRET, 
+                oauth_token: this.user.oauth_token, 
+                oauth_token_secret: this.user.oauth_token_secret
+            },
+            type: "task",
+            task_type: this.type,
+            debug: this.debug_mode,
+        };
+
+        // Assignation des listeners
+        worker.on('message', this.onWorkerMessage(worker));
+
+        // Envoi de la tâche quand le worker est prêt
+        worker.once('online', () => {
+            worker.postMessage(task_to_worker);
+        });
+
+        this.pool.push(worker);
+    }
+
+    protected onWorkerMessage(worker: Worker) {
+        return (data: WorkerMessage) => {
+            logger.silly("Recieved message from worker:", data);
+
+            if (data.type === "info") {
+                // Envoi d'un message de progression de la suppression
+                this.done += data.info!.done;
+    
+                // Incrémente le compteur si la tâche est de type tweet
+                if (this.type === "tweet")
+                    TweetCounter.inc(data.info!.done);
+                
+                this.remaining -= (data.info!.done + data.info!.failed);
+                this.failed += data.info!.failed;
+    
+                this.emitProgress(this.done, this.remaining, this.failed);
+            }
+            else if (data.type === "end") {
+                // End if all workers end
+                this.pool = this.pool.filter(w => w !== worker);
+
+                if (this.pool.length === 0) {
+                    // All is over !
+                    this.end();
+                }
+                process.nextTick(() => worker.terminate());
+            }
+            else if (data.type === "error") {
+                this.emitError(data.error);
+                // Termine le worker
+                this.end(false);
+            }
+            else if (data.type === "misc") {
+                logger.debug("Worker misc data", data);
+            }
+            else if (data.type === "twitter_error") {
+                const errors = data.error as {[code: string]: [number, string]};
+    
+                for (const error in errors) {
+                    if (error in this.twitter_errors_encountered) {
+                        this.twitter_errors_encountered[error][0] += errors[error][0];
+                    }
+                    else {
+                        this.twitter_errors_encountered[error] = errors[error];
+                    }
+                }
+            }
+        };
     }
 
     protected emit(progression: TaskProgression) {
@@ -368,5 +397,9 @@ export default class Task {
             error: reason,
             type: this.type
         });
+    }
+
+    protected get debug_mode() {
+        return logger.level === "debug";
     }
 }

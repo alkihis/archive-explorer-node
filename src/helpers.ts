@@ -49,6 +49,10 @@ export function getCompleteUserFromTwitterId(twitter_id: string) {
     return UserModel.findOne({ twitter_id });
 }
 
+export function getCompleteUserFromTwitterScreenName(twitter_screen_name: string) {
+    return UserModel.findOne({ twitter_screen_name: { $regex: "^" + twitter_screen_name + "$", $options: "i" }});
+}
+
 export function batchTweets(ids: string[]) {
     return TweetModel.find({ id_str: { $in: ids } })
         .then((statuses: ITweet[]) => {
@@ -282,25 +286,20 @@ export async function purgeCollections(COLLECTIONS: any, db: any, mongoose: any)
     const drops: Promise<any>[] = [];
     for (const collection of Object.keys(COLLECTIONS)) {
         drops.push(db.db.dropCollection(collection)
-            .then(() => logger.info(`Collection ${collection} dropped.`))
+            .then(() => console.log(`Collection ${collection} dropped.`))
             .catch(() => logger.warn(`Unable to drop collection ${collection}. (maybe it hasn't been created yet)`)));
     }
 
-    Promise.all(drops).then(() => db.close()).then(() => {
-        mongoose.disconnect();
-        logger.info("Mongo disconnected. Purge is complete.");
-    });
+    return Promise.all(drops).then(() => db.close()).then(() => mongoose.disconnect());
 }
 
 export async function purgePartial(COLLECTIONS: any, db: any) {
     const drops: Promise<any>[] = [];
     for (const collection of Object.keys(COLLECTIONS)) {
         drops.push(db.db.dropCollection(collection)
-            .then(() => logger.info(`Collection ${collection} dropped.`))
+            .then(() => console.log(`Collection ${collection} dropped.`))
             .catch(() => logger.warn(`Unable to drop collection ${collection}. (maybe it hasn't been created yet)`)));
     }
 
-    Promise.all(drops).then(() => {
-        logger.info("Purge is complete.");
-    });
+    return Promise.all(drops);
 }

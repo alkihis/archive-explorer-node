@@ -6,17 +6,23 @@ let task: WorkerTaskMaker;
 
 parentPort!.on('message', (data: WorkerTask) => {
     if (data.type === "task") {
-        console.log("New task on worker of type", data.task_type);
+        // console.log("New task on worker of type", data.task_type);
 
         const maker = TaskJobs[data.task_type];
 
+        // If we have a job available for this kind of task
         if (maker) {
             task = new WorkerTaskMaker(data.tweets, data.credentials, maker, parentPort!);
-            task.debug_mode = DEBUG;
+            if (typeof data.debug !== 'undefined') {
+                task.debug_mode = data.debug;
+            }
+            else {
+                task.debug_mode = DEBUG;
+            }
 
             task.start()
                 .then(() => {
-                    console.log("Worker task end");
+                    // console.log("Worker task end");
                     parentPort!.postMessage({ type: "end" });
                 })
                 .catch(e => {
@@ -30,7 +36,7 @@ parentPort!.on('message', (data: WorkerTask) => {
         }
     }
     else if (data.type === "stop") {
-        console.log("Request worker end");
+        // console.log("Request worker end");
         if (task) {
             task.stop();
         }
