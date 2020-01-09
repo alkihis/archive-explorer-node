@@ -145,6 +145,9 @@ export default class Task {
 
     protected last: TaskProgression;
 
+    /**
+     * Log Twitter errors encountered during execution (code (as string) => [number of occurences, message for code])
+     */
     protected twitter_errors_encountered: { [code: string]: [number, string] } = {};
 
     constructor(
@@ -281,7 +284,7 @@ export default class Task {
     }
 
     protected startWorker(items: string[]) {
-        logger.silly(`Task #${this.id}: Starting worker ${this.pool.length + 1}.`);
+        logger.silly(`Task #${this.id}: Starting worker ${this.pool.length + 1} with ${items.length} items.`);
 
         const worker = new Worker(__dirname + '/task_worker/worker.js');
         const task_to_worker: WorkerTask = {
@@ -328,12 +331,13 @@ export default class Task {
             else if (data.type === "end") {
                 // End if all workers end
                 this.pool = this.pool.filter(w => w !== worker);
+                logger.verbose(`Terminating a worker on task #${this.id}.`);
+                process.nextTick(() => worker.terminate());
 
                 if (this.pool.length === 0) {
                     // All is over !
                     this.end();
                 }
-                process.nextTick(() => worker.terminate());
             }
             else if (data.type === "error") {
                 this.emitError(data.error);

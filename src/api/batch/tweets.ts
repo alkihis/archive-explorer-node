@@ -1,7 +1,7 @@
 import { Router } from "express";
 import AEError, { sendError } from "../../errors";
 import { batchTweets, getCompleteUserFromId, saveTweets, sanitizeMongoObj, methodNotAllowed, sendTwitterError } from "../../helpers";
-import Twitter from 'twitter-lite';
+import Twitter from '../../twitter_lite_clone/twitter_lite';
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
 import { Status } from "twitter-d";
 import logger from "../../logger";

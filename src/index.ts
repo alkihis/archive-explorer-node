@@ -12,7 +12,7 @@ import cors from 'cors';
 import { COLLECTIONS } from './models';
 import { readFileSync, mkdirSync } from 'fs';
 import winston from 'winston';
-import { purgeCollections, purgePartial, getCompleteUserFromTwitterScreenName } from './helpers';
+import { purgeCollections, purgePartial, getCompleteUserFromTwitterScreenName, createTwitterObjectFromUser } from './helpers';
 import Task, { isValidTaskType } from './api/tasks/Task';
 import StaticServer from './static_server';
 import CliHelper from './cli';
@@ -29,7 +29,7 @@ commander
     .option('-m, --mongo-port <port>', 'Mongo server port', Number, 3281)
     .option('-p, --purge', 'Purge all mongo collection, then quit')
     .option('-d, --prod', 'Production mode (activate HTTPS, file logging)')
-    .option('-l, --log-level [logLevel]', 'Log level [debug|verbose|info|warn|error]', /^(debug|verbose|info|warn|error)$/, 'info')
+    .option('-l, --log-level [logLevel]', 'Log level [debug|silly|verbose|info|warn|error]', /^(debug|silly|verbose|info|warn|error)$/, 'info')
 .parse(process.argv);
 
 if (commander.logLevel) {
@@ -224,7 +224,7 @@ function startCli() {
                 const user_object = await getCompleteUserFromTwitterScreenName(user_sn);
 
                 if (user_object) {
-                    return [...Task.tasksOf(user_object.user_id)].map(printTask);
+                    return [...Task.tasksOf(user_object.user_id)].map(printTask).join('\n');
                 }
                 return `User ${user_sn} does not exists.`;
             }
@@ -234,7 +234,7 @@ function startCli() {
     list_task_listener.addSubListener( 
         /^\d+$/,
         rest => {
-            const id = rest;
+            const id = rest.trim();
             if (Task.exists(id)) {
                 return printTask(Task.get(id)!);
             }

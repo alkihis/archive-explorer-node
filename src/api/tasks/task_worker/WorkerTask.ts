@@ -1,4 +1,4 @@
-import Twitter from 'twitter-lite';
+import Twitter from '../../../twitter_lite_clone/twitter_lite';
 import { MessagePort } from 'worker_threads';
 
 /**
@@ -56,7 +56,9 @@ export const TaskJobs = {
     },
     fav: {
         method: 'POST',
-        request: (id: string) => ({ endpoint: 'favorites/destroy', parameters: { id, include_entities: false } }),
+        request: (id: string) => {
+            return { endpoint: 'favorites/destroy', parameters: { id, include_entities: false } };
+        },
         chunk_length: 75,
         retry_on_rate_limit_exceeded: true
     },

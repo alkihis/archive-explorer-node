@@ -9,12 +9,23 @@ import { JSONWebToken } from '../interfaces';
 import { isTokenInvalid } from '../helpers';
 import bodyParser from 'body-parser';
 import logger from '../logger';
+import cookieParser from 'cookie-parser';
 
 const route = Router();
+
+route.use(cookieParser());
 
 // Declare jwt use
 route.use(
     jwt({ 
+        getToken: function fromHeaderOrQuerystring(req) {
+            if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+                return req.headers.authorization.split(' ')[1];
+            } else if (req.cookies && req.cookies.login_token) {
+                return req.cookies.login_token;
+            }
+            return null;
+        },
         secret: SECRET_PUBLIC_KEY, 
         credentialsRequired: true,
         isRevoked: (res, payload, done) => {

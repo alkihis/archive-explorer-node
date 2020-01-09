@@ -1,5 +1,5 @@
 import { Router } from "express";
-import twitter from 'twitter-lite';
+import twitter from '../../twitter_lite_clone/twitter_lite';
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
 import AEError, { sendError } from "../../errors";
 import { getCompleteUserFromTwitterId, signToken, methodNotAllowed } from "../../helpers";
@@ -39,7 +39,7 @@ route.post('/', (req, res) => {
             // On a les données ! il faut vérifier que l'utilisateur existe
             var user: IUser | null;
             try {
-                user = await getCompleteUserFromTwitterId(access.user_id);
+                user = await getCompleteUserFromTwitterId(access.user_id as string);
             } catch (e) {
                 // On doit créer l'utilisateur
                 user = null;
@@ -49,8 +49,8 @@ route.post('/', (req, res) => {
             const tmp_user = new twitter({
                 consumer_key: CONSUMER_KEY,
                 consumer_secret: CONSUMER_SECRET,
-                access_token_key: access.oauth_token,
-                access_token_secret: access.oauth_token_secret
+                access_token_key: access.oauth_token as string,
+                access_token_secret: access.oauth_token_secret as string
             });
 
             // Obtention des credentials
@@ -111,8 +111,8 @@ route.post('/', (req, res) => {
                 // Mise à jour de l'utilisateur avec les nouvelles données
                 user.twitter_name = t_user.name;
                 user.profile_picture = t_user.profile_image_url_https;
-                user.oauth_token = access.oauth_token;
-                user.oauth_token_secret = access.oauth_token_secret;
+                user.oauth_token = access.oauth_token as string;
+                user.oauth_token_secret = access.oauth_token_secret as string;
                 user.twitter_screen_name = t_user.screen_name;
                 user.last_login = new Date;
                 user.save();

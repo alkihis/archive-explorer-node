@@ -2,7 +2,7 @@ import { Router } from "express";
 import AEError, { sendError } from "../../errors";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
 import { getCompleteUserFromId, batchUsers, saveTwitterUsers, sanitizeMongoObj, methodNotAllowed, sendTwitterError } from "../../helpers";
-import Twitter from 'twitter-lite';
+import Twitter from '../../twitter_lite_clone/twitter_lite';
 import { FullUser } from "twitter-d";
 import logger from "../../logger";
 
@@ -12,22 +12,27 @@ const route = Router();
 
 route.post('/', (req, res) => {
   // Download users from twitter
-  if (req.user && req.body && req.body.ids && Array.isArray(req.body.ids)) {
-    const ids: string[] = req.body.ids;
+  const fetch_id = req.body && req.body.ids && Array.isArray(req.body.ids);
+
+  if (req.user && req.body && (
+    fetch_id
+    || (req.body.sns && Array.isArray(req.body.sns))
+  )) {
+    const ids: string[] = fetch_id ? req.body.ids : req.body.sns;
 
     // Test if rq is OK
-    if (!req.body.ids.length) {
+    if (!ids.length) {
       sendError(AEError.invalid_request, res, "Needs users attached to request");
       return;
     }
-    if (req.body.ids.length > 100) {
+    if (ids.length > 100) {
       sendError(AEError.invalid_request, res, "Up to 100 users could be agregated in a request.");
       return;
     }
 
     // Get users from DB or/and Twitter
     (async () => {
-      const existings = await batchUsers(ids);
+      const existings = await batchUsers(ids, !fetch_id);
 
       const ids_existings = new Set(existings.map(e => e.id_str));
 
@@ -61,7 +66,15 @@ route.post('/', (req, res) => {
         });
 
         // Batch tweets using lookup endpoint (100 max)
-        const twitter_users = await user.post('users/lookup', { user_id: to_retrieve.join(','), include_entities: true })
+        const parameters: any = { include_entities: true };
+        if (fetch_id) {
+          parameters.user_id = to_retrieve.join(',');
+        }
+        else {
+          parameters.screen_name = to_retrieve.join(',');
+        }
+
+        const twitter_users = await user.post('users/lookup', parameters)
           // Save every tweet in mangoose (and catch insert errors)
           .then((users: FullUser[]) => saveTwitterUsers(users).catch(e => {
             logger.error("Unable to save users.", e);

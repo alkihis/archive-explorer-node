@@ -1,7 +1,7 @@
 import { UserModel, TokenModel, IUser, TweetModel, ITweet, TwitterUserModel, ITwitterUser } from "./models";
 import { SECRET_PRIVATE_KEY, SECRET_PASSPHRASE, SECRET_PUBLIC_KEY } from "./constants";
 import JsonWebToken from 'jsonwebtoken';
-import TwitterLite from "twitter-lite";
+import TwitterLite from "./twitter_lite_clone/twitter_lite";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "./twitter_const";
 import express from 'express';
 import Mongoose from "mongoose";
@@ -72,8 +72,16 @@ export function batchTweets(ids: string[]) {
         });
 }
 
-export function batchUsers(ids: string[]) {
-    return TwitterUserModel.find({ id_str: { $in: ids } })
+export function batchUsers(ids: string[], as_screen_names = false) {
+    let user_prom: Mongoose.DocumentQuery<ITwitterUser[], ITwitterUser, {}>;
+    if (as_screen_names) {
+        user_prom = TwitterUserModel.find({ screen_name: { $in: ids } });
+    }
+    else {
+        user_prom = TwitterUserModel.find({ id_str: { $in: ids } });
+    }
+    
+    return user_prom
         .then((users: ITwitterUser[]) => {
             const current_date_minus = new Date;
             // Expiration: 1 jour

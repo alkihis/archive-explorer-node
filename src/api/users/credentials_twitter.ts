@@ -2,7 +2,7 @@ import { Router } from "express";
 import { getCompleteUserFromId, sanitizeMongoObj, methodNotAllowed, sendTwitterError } from "../../helpers";
 import logger from "../../logger";
 import AEError, { sendError } from "../../errors";
-import Twitter from 'twitter-lite';
+import Twitter from '../../twitter_lite_clone/twitter_lite';
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
 
 const route = Router();
