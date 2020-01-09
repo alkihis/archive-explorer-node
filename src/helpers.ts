@@ -19,7 +19,7 @@ export function methodNotAllowed(allow: string | string[]) {
 
 export function sanitizeMongoObj<T extends Mongoose.Document>(data: T) : any {
     try {
-        const original_clean = data.toJSON();
+        const original_clean = 'toJSON' in data ? data.toJSON() : data;
     
         for (const prop in original_clean) {
             if (prop.startsWith('_')) {
@@ -68,7 +68,7 @@ export function batchTweets(ids: string[]) {
 
             // Return valids
             logger.debug(`${statuses.length} valid tweets batched from MongoDB (${ids.length} fetched)`);
-            return statuses;
+            return statuses.map(s => s.toObject());
         });
 }
 
@@ -82,7 +82,7 @@ export function batchUsers(ids: string[], as_screen_names = false) {
     }
     
     return user_prom
-        .then((users: ITwitterUser[]) => {
+        .then(users => {
             const current_date_minus = new Date;
             // Expiration: 1 jour
             current_date_minus.setDate(current_date_minus.getDate() - 1);
@@ -95,11 +95,12 @@ export function batchUsers(ids: string[], as_screen_names = false) {
 
             // Return valids
             logger.debug(`${users.length} valid Twitter users batched from MongoDB (${ids.length} fetched)`);
-            return users;
+            return users.map(u => u.toObject());
         });
 }
 
 export function saveTweets(tweets: Status[]) {
+    // TODO MAKE CONDITIONS: verify if tweet already exists
     return TweetModel.insertMany(
         tweets
             .map(e => suppressUselessTweetProperties(e))
@@ -108,6 +109,7 @@ export function saveTweets(tweets: Status[]) {
 }
 
 export function saveTwitterUsers(users: FullUser[]) {
+    // TODO MAKE CONDITIONS: verify if user already exists
     return TwitterUserModel.insertMany(
         users
             .map(u => suppressUselessTUserProperties(u))

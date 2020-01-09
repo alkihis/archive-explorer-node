@@ -34,10 +34,17 @@ route.post('/', (req, res) => {
     (async () => {
       const existings = await batchUsers(ids, !fetch_id);
 
-      const ids_existings = new Set(existings.map(e => e.id_str));
+      const ids_existings = new Set(
+        existings.map(e => {
+          if (fetch_id) {
+            return e.id_str;
+          }
+          return e.screen_name.toLowerCase();
+        })
+      );
 
       // array diff
-      const to_retrieve = ids.filter(e => !ids_existings.has(e));
+      const to_retrieve = ids.filter(e => !ids_existings.has(e.toLowerCase()));
       let error = false;
 
       if (to_retrieve.length) {
