@@ -56,9 +56,7 @@ export const TaskJobs = {
     },
     fav: {
         method: 'POST',
-        request: (id: string) => {
-            return { endpoint: 'favorites/destroy', parameters: { id, include_entities: false } };
-        },
+        request: (id: string) => ({ endpoint: 'favorites/destroy', parameters: { id, include_entities: false } }),
         chunk_length: 75,
         retry_on_rate_limit_exceeded: true
     },
