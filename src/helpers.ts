@@ -75,7 +75,10 @@ export function batchTweets(ids: string[]) {
 export function batchUsers(ids: string[], as_screen_names = false) {
     let user_prom: Mongoose.DocumentQuery<ITwitterUser[], ITwitterUser, {}>;
     if (as_screen_names) {
-        user_prom = TwitterUserModel.find({ screen_name: { $in: ids } });
+        user_prom = TwitterUserModel.find({ screen_name: {
+            $regex: new RegExp('(^' + ids.join('$)|(^') + '$)'), 
+            $options: "i"
+        }});
     }
     else {
         user_prom = TwitterUserModel.find({ id_str: { $in: ids } });
@@ -100,6 +103,10 @@ export function batchUsers(ids: string[], as_screen_names = false) {
 }
 
 export async function saveTweets(tweets: Status[]) {
+    if (!tweets.length) {
+        return [];
+    }
+
     logger.debug(`Saving ${tweets.length} tweets in database.`);
     // Delete tweets in DB that are already existant
     await TweetModel.deleteMany({ id_str: { $in: tweets.map(t => t.id_str) } })
@@ -112,7 +119,11 @@ export async function saveTweets(tweets: Status[]) {
 }
 
 export async function saveTwitterUsers(users: FullUser[]) {
-    logger.debug(`Saving ${users.length} twitter users in database.`);
+    if (!users.length) {
+        return [];
+    }
+
+    logger.debug(`Saving ${users.length} twitter users in database (${users.map(u => `@${u.screen_name}`)}).`);
     // Delete users in DB that are already existant (maybe useless and slow)
     await TwitterUserModel.deleteMany({ id_str: { $in: users.map(t => t.id_str) } })
 

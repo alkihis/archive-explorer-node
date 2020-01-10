@@ -44,7 +44,7 @@ export const TaskJobs = {
     },
     mute: {
         method: 'POST',
-        request: (id: string) => ({ endpoint: 'mutes/users/destroy', parameters: { user_id: id } }),
+        request: (id: string) => ({ endpoint: 'mutes/users/destroy', parameters: { user_id: id, skip_status: true, include_entities: false } }),
         chunk_length: 75,
         retry_on_rate_limit_exceeded: true
     },
