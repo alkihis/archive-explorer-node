@@ -86,6 +86,7 @@ route.post('/', (req, res) => {
           .then((users: FullUser[]) => saveTwitterUsers(users).catch(e => {
             logger.error("Unable to save users.", e);
             sendError(AEError.server_error, res);
+            error = true;
           }))
           // Otherwise, send Twitter error
           .catch(e => {

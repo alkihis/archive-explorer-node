@@ -99,8 +99,11 @@ export function batchUsers(ids: string[], as_screen_names = false) {
         });
 }
 
-export function saveTweets(tweets: Status[]) {
-    // TODO MAKE CONDITIONS: verify if tweet already exists
+export async function saveTweets(tweets: Status[]) {
+    logger.debug(`Saving ${tweets.length} tweets in database.`);
+    // Delete tweets in DB that are already existant
+    await TweetModel.deleteMany({ id_str: { $in: tweets.map(t => t.id_str) } })
+
     return TweetModel.insertMany(
         tweets
             .map(e => suppressUselessTweetProperties(e))
@@ -108,8 +111,11 @@ export function saveTweets(tweets: Status[]) {
     );
 }
 
-export function saveTwitterUsers(users: FullUser[]) {
-    // TODO MAKE CONDITIONS: verify if user already exists
+export async function saveTwitterUsers(users: FullUser[]) {
+    logger.debug(`Saving ${users.length} twitter users in database.`);
+    // Delete users in DB that are already existant (maybe useless and slow)
+    await TwitterUserModel.deleteMany({ id_str: { $in: users.map(t => t.id_str) } })
+
     return TwitterUserModel.insertMany(
         users
             .map(u => suppressUselessTUserProperties(u))
