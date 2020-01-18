@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import logger from "./logger";
 
-export const VERSION = "1.4.0";
+export const VERSION = "1.5.0";
 export const CONFIG_FILE = JSON.parse(readFileSync(__dirname + "/../settings.json", "utf-8"));
 export const TweetCounter = new class {
   protected count_file: { deleted: number };
