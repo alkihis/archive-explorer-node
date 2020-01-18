@@ -145,6 +145,12 @@ export default class WorkerTaskMaker {
                 return Promise.reject(88);
             }
             else if (e && e.errors) {
+                // No status found with that ID.
+                if (e.errors[0].code === 144) {
+                    current.done++;
+                    return;
+                }
+                // Other errors
                 if (e.errors[0].code in last_errors) {
                     last_errors[e.errors[0].code][0]++;
                 }
