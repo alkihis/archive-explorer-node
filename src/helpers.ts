@@ -98,7 +98,7 @@ export function batchUsers(ids: string[], as_screen_names = false) {
 
             // Return valids
             logger.debug(`${users.length} valid Twitter users batched from MongoDB (${ids.length} fetched)`);
-            return users.map(u => u.toObject());
+            return users.map(u => u.toObject() as ITwitterUser);
         });
 }
 

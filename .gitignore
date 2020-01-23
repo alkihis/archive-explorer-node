@@ -9,3 +9,4 @@ logs
 deploy/*
 settings.json
 utils
+start.js

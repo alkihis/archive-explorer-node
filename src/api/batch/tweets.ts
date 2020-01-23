@@ -25,6 +25,10 @@ route.post('/', (req, res) => {
       sendError(AEError.invalid_request, res, "Up to 100 tweets could be agregated in a request.");
       return;
     }
+    if (!ids.every(e => typeof e === 'string' && e.length < 32)) {
+      sendError(AEError.invalid_request, res, "Tweet IDs should be representated with strings of length < 32 chars");
+      return;
+    }
 
     // Get tweets from DB or/and Twitter
     (async () => {
@@ -33,7 +37,7 @@ route.post('/', (req, res) => {
       const ids_existings = new Set(existings.map(e => e.id_str));
 
       // array diff
-      const to_retrieve = ids.filter(e => !ids_existings.has(e));
+      let to_retrieve = ids.filter(e => !ids_existings.has(e))
 
       let error = false;
 

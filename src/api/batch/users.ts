@@ -7,6 +7,25 @@ import { FullUser } from "twitter-d";
 import logger from "../../logger";
 
 //// BULKING USERS (100 max)
+const user_ids_that_dont_exists = new Set<string>();
+const screen_names_that_dont_exists = new Map<string, Date>();
+
+// reset ID set every 24 hours
+setInterval(() => {
+  user_ids_that_dont_exists.clear();
+}, 1000 * 60 * 60 * 24);
+
+// Clear not found screen names set every hour
+setInterval(() => {
+  const entries = [...screen_names_that_dont_exists.entries()];
+  // Minimal date to validate, 5 days ago
+  const threshold = new Date().getTime() - (1000 * 60 * 60 * 24 * 5);
+  for (const [sn, date] of entries) {
+    if (date.getTime() < threshold) {
+      screen_names_that_dont_exists.delete(sn);
+    }
+  }
+}, 1000 * 60 * 60);
 
 const route = Router();
 
@@ -19,7 +38,7 @@ route.post('/', (req, res) => {
     || (req.body.sns && Array.isArray(req.body.sns))
   )) {
     const ids: string[] = fetch_id ? req.body.ids : req.body.sns;
-
+    
     // Test if rq is OK
     if (!ids.length) {
       sendError(AEError.invalid_request, res, "Needs users attached to request");
@@ -27,6 +46,10 @@ route.post('/', (req, res) => {
     }
     if (ids.length > 100) {
       sendError(AEError.invalid_request, res, "Up to 100 users could be agregated in a request.");
+      return;
+    }
+    if (!ids.every(e => typeof e === 'string' && e.length < 32)) {
+      sendError(AEError.invalid_request, res, "Users should be representated with strings of length < 32 chars");
       return;
     }
 
@@ -44,8 +67,16 @@ route.post('/', (req, res) => {
       );
 
       // array diff
-      const to_retrieve = ids.filter(e => !ids_existings.has(e.toLowerCase()));
+      let to_retrieve = ids.map(e => e.toLowerCase()).filter(e => !ids_existings.has(e));
       let error = false;
+
+      if (fetch_id) {
+        to_retrieve = to_retrieve.filter(id => !user_ids_that_dont_exists.has(id));
+      }
+      else {
+        // fetch screen name
+        to_retrieve = to_retrieve.filter(screen_name => !screen_names_that_dont_exists.has(screen_name));
+      }
 
       if (to_retrieve.length) {
         // Max 100 users allowed
@@ -101,6 +132,32 @@ route.post('/', (req, res) => {
 
         if (twitter_users) {
           existings.push(...twitter_users);
+        }
+
+        // Check which ones does not exists
+        if (fetch_id) {
+          // Find users to retrieve that are not in 
+          const retrieved = new Set((twitter_users || []).map(e => e.id_str));
+          const not_found = to_retrieve.filter(id => !retrieved.has(id));
+
+          if (not_found.length) {
+            logger.debug(`${not_found.length} users has been marqued as not found.`);
+            for (const e of not_found) {
+              user_ids_that_dont_exists.add(e);
+            }
+          }
+        }
+        else {
+          // fetch screen name : find users to retrieve that are not in 
+          const retrieved = new Set((twitter_users || []).map(e => e.screen_name));
+          const not_found = to_retrieve.filter(sn => !retrieved.has(sn));
+
+          if (not_found.length) {
+            logger.debug(`${not_found.length} users has been marqued as not found.`);
+            for (const e of not_found) {
+              screen_names_that_dont_exists.set(e, new Date);
+            }
+          }
         }
       }
 
