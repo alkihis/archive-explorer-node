@@ -3,6 +3,9 @@ import { Worker } from 'worker_threads';
 import logger from "../../logger";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "../../twitter_const";
 import { TweetCounter } from "../../constants";
+import Timer from 'timerize';
+
+Timer.default_format = "s";
 
 export interface TaskProgression {
     percentage: number;
@@ -51,6 +54,17 @@ export type TaskType = "tweet" | "mute" | "block" | "fav" | "dm";
 
 export function isValidTaskType(type: string) : type is TaskType {
     return type === "tweet" || type === "mute" || type === "block" || type === "fav" || type === "dm";
+}
+
+function getFormattedDate() {
+    const now = new Date;
+    const [month, day] = [
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0")
+    ];
+    const final_date = `${now.getFullYear()}-${month}-${day} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+
+    return final_date;
 }
 
 export default class Task {
@@ -143,6 +157,8 @@ export default class Task {
     protected remaining = 0;
     protected failed = 0;
 
+    protected timer?: Timer = new Timer;
+
     protected last: TaskProgression;
 
     /**
@@ -160,8 +176,8 @@ export default class Task {
         const c = Task.current_id;
         Task.current_id++;
         this.id = c;
-
-        logger.info(`Creation of task #${this.id}, type "${type}" for user @${user.screen_name} (${items_ids.length} elements)`);
+        
+        logger.info(`${getFormattedDate()}> Creation of task #${this.id}, type ${type} for user @${user.screen_name} (${items_ids.length} elements)`);
 
         this.last = {
             id: String(this.id),
@@ -248,8 +264,14 @@ export default class Task {
         // Unregister task from Maps
         Task.unregister(this);
 
-        logger.info(`Task #${this.id} has ended. Type ${this.type}, from @${this.user.screen_name}, ${this.done} ok + ${this.failed} failed of ${this.length} (Remaining ${this.remaining})`);
-        
+        let computed_stats = `${this.done} ok${this.failed ? `, ${this.failed} failed` : ""} over ${this.length}`;
+        if (this.remaining) {
+            computed_stats += ` (Remaining ${this.remaining})`;
+        }
+
+        logger.info(`${getFormattedDate()}> Task #${this.id} of type ${this.type} from @${this.user.screen_name} has ended. Taken ${this.timer?.elapsed}s. ${computed_stats}`);
+        this.timer = undefined;
+
         if (this.has_twitter_errors_encountered) {
             logger.warn(`Task #${this.id}: Twitter errors has been encountered: ${
                 Object.entries(this.twitter_errors_encountered)
