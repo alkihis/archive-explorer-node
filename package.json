@@ -8,7 +8,8 @@
   "bugs": "https://github.com/alkihis/archive-explorer-node/issues",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start-dev": "node start.js"
+    "start-dev": "node start.js",
+    "deploy": "./deploy.sh"
   },
   "keywords": [],
   "author": "",

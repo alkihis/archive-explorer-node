@@ -3,45 +3,33 @@ import AEError, { sendError } from '../errors';
 import task_route from './tasks/index';
 import users_route from './users/index';
 import batch_route from './batch/index';
-import jwt from 'express-jwt';
-import { SECRET_PUBLIC_KEY, TweetCounter } from '../constants';
+import { TweetCounter } from '../constants';
 import { JSONWebToken } from '../interfaces';
-import { isTokenInvalid } from '../helpers';
 import bodyParser from 'body-parser';
 import logger from '../logger';
 import cookieParser from 'cookie-parser';
+import jwt from './jwt';
 
 const route = Router();
 
 route.use(cookieParser());
 
 // Declare jwt use
-route.use(
-    jwt({ 
-        getToken: function fromHeaderOrQuerystring(req) {
-            if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
-                return req.headers.authorization.split(' ')[1];
-            } else if (req.cookies && req.cookies.login_token) {
-                return req.cookies.login_token;
-            }
-            return null;
-        },
-        secret: SECRET_PUBLIC_KEY, 
-        credentialsRequired: true,
-        isRevoked: (res, payload, done) => {
-            isTokenInvalid(payload.jti, res)
-                .then(is_revoked => { done(null, is_revoked); })
-                .catch(e => { logger.error("Unable to check token validity", e); done(e); });
-        }
-    }).unless(
-        { path: ["/api/users/request.json", "/api/users/access.json", "/api/callback_twitter", "/api", "/api/deleted_count.json"] }
-    )
-);
+route.use(jwt);
+
+route.use((req, res, next) => {
+    if (req.__ask_refresh__) {
+        res.setHeader('X-Upgrade-Token', req.__ask_refresh__);
+        delete req.__ask_refresh__;
+    }
+    next();
+});
 
 // Extends Express request
 declare module 'express-serve-static-core' {
     interface Request {
       user?: JSONWebToken;
+      __ask_refresh__?: string;
     }
 }
 

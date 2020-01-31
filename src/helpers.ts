@@ -3,7 +3,7 @@ import { SECRET_PRIVATE_KEY, SECRET_PASSPHRASE, SECRET_PUBLIC_KEY } from "./cons
 import JsonWebToken from 'jsonwebtoken';
 import TwitterLite from "./twitter_lite_clone/twitter_lite";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "./twitter_const";
-import express from 'express';
+import express, { Request } from 'express';
 import Mongoose from "mongoose";
 import AEError, { sendError } from "./errors";
 import { Status, FullUser } from "twitter-d";
@@ -142,17 +142,47 @@ export function invalidateTokensFromUser(user_id: string) {
     return TokenModel.deleteMany({ user_id });
 }
 
-export function isTokenInvalid(token: string, res?: express.Request) {
+export function isTokenInvalid(token: string, req?: express.Request, full_payload?: JSONWebToken) {
     return getTokenInstanceFromString(token)
-        .then(model => {
+        .then(async model => {
             if (model) {
                 // Actualise le last_use
                 model.last_use = new Date;
-                if (res) {
-                    model.login_ip = res.connection.remoteAddress!;
+                if (req) {
+                    model.login_ip = req.connection.remoteAddress!;
                 }
                 // Sauvegarde sans considérer une erreur
                 model.save().catch(e => e);
+
+                // Test if token should be renewed
+                if (full_payload && req) {
+                    const exp = new Date(Number(full_payload.exp) * 1000);
+                    const now = new Date;
+                    
+                    // If token is not expired
+                    if (exp.getTime() >= now.getTime()) {    
+                        now.setDate(now.getDate() + 14);
+
+                        // Token expires in less than 14 days
+                        if (exp.getTime() < now.getTime()) {
+                            try {
+                                const token = await makeTokenFromUser(
+                                    full_payload.jti,
+                                    full_payload.user_id,
+                                    full_payload.screen_name,
+                                    full_payload.login_ip
+                                );
+
+                                req.__ask_refresh__ = token;
+                            } catch (e) {
+                                logger.error("Unable to create renewed token:", e);
+                            }
+                        }
+                    }
+                    else {
+                        return true;
+                    }
+                }
 
                 return false;
             }
@@ -188,7 +218,7 @@ export function signToken(payload: TokenPayload, id: string) {
             { key: SECRET_PRIVATE_KEY, passphrase: SECRET_PASSPHRASE }, // Clé RSA privée
             { 
                 algorithm: 'RS256', 
-                expiresIn: "365d", // 1 an de durabilité
+                expiresIn: "90d", // 3 months durability
                 issuer: "Archive Explorer Server 1", 
                 jwtid: id, // ID généré avec uuid
             }, 
@@ -198,6 +228,14 @@ export function signToken(payload: TokenPayload, id: string) {
             }
         );
     }) as Promise<string>;
+}
+
+export function makeTokenFromUser(jti: string, user_id: string, screen_name: string, login_ip: string) {
+    return signToken({ 
+        user_id, 
+        screen_name,
+        login_ip
+    }, jti);
 }
 
 export function createTwitterObjectFromUser(user: IUser) {
