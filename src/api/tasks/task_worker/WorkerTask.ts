@@ -115,6 +115,7 @@ export default class WorkerTaskMaker {
         // concurrent running tasks
         let chunk_len = this.starter.chunk_length;
         let do_task = this.task_maker;
+        const error_stack = new Set<string>();
 
         // DEBUG
         if (this.debug_mode) {
@@ -156,6 +157,27 @@ export default class WorkerTaskMaker {
                 }
                 else {
                     last_errors[e.errors[0].code] = [1, e.errors[0].message];
+                }
+            }
+            else if (
+                e instanceof Error && 
+                e.stack && 
+                e.stack.startsWith('FetchError') &&
+                e.stack.includes('https://api.twitter.com/1.1/statuses/destroy/')
+            ) {
+                // Try to get the ID (statuses)
+                const part2 = e.stack.split('https://api.twitter.com/1.1/statuses/destroy/').pop();
+                if (part2) {
+                    const id = part2.split('.json', 2)[0];
+                    
+                    if (!error_stack.has(id) && Number(id)) {
+                        error_stack.add(id);
+
+                        // Retry the task
+                        return do_task(id)
+                            .then(done_pp_fn)
+                            .catch(failed_pp_fn);
+                    }
                 }
             }
 

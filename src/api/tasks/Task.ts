@@ -18,6 +18,12 @@ export interface TaskProgression {
     type: TaskType;
 }
 
+export interface TaskEnd {
+    id: string;
+    type: TaskType;
+    errors?: { [code: string]: [number, string] };
+}
+
 interface WorkerTask { 
     type: "task" | "stop", 
     credentials: TwitterCredentials, 
@@ -245,7 +251,8 @@ export default class Task {
         if (with_end_message) {
             this.sendMessageToSockets('task end', {
                 id: String(this.id),
-                type: this.type
+                type: this.type,
+                errors: this.twitter_errors_encountered,
             });
         }
 
