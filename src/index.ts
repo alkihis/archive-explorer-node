@@ -1,7 +1,7 @@
 import express from 'express';
 import commander from 'commander';
 import { VERSION, CONFIG_FILE, TweetCounter } from './constants';
-import logger from './logger';
+import logger, { FORMAT_FILE } from './logger';
 import APIIndex, { apiErrors as APIErrors } from './api/index';
 import socket_io from 'socket.io';
 import http_base from 'http';
@@ -29,6 +29,7 @@ commander
     .option('-m, --mongo-port <port>', 'Mongo server port', Number, 3281)
     .option('-p, --purge', 'Purge all mongo collection, then quit')
     .option('-d, --prod', 'Production mode (activate HTTPS, file logging)')
+    .option('--file-logging')
     .option('-l, --log-level [logLevel]', 'Log level [debug|silly|verbose|info|warn|error]', /^(debug|silly|verbose|info|warn|error)$/, 'info')
 .parse(process.argv);
 
@@ -40,8 +41,11 @@ const app = express();
 
 let redirector: express.Express;
 let http_server: http_base.Server | https_base.Server;
+let file_logging = commander.fileLogging;
 
 if (commander.prod) {
+    file_logging = true;
+
     IS_DEV_MODE = false;
     const SERVER_HTTPS_KEYS = CONFIG_FILE.https_key_directory;
     const credentials = {
@@ -53,27 +57,49 @@ if (commander.prod) {
     http_server = https_base.createServer(credentials, app); 
     redirector = express();
     commander.port = 443;
-
-    // Activate file logger
-    try {
-        mkdirSync(__dirname + '/../logs');
-    } catch (e) { }
-
-    logger.add(new winston.transports.File({ filename: __dirname + '/../logs/info.log', level: 'info', eol: "\n" }));
-    logger.add(new winston.transports.File({ filename: __dirname + '/../logs/warn.log', level: 'warn', eol: "\n" }));
-    logger.add(new winston.transports.File({ filename: __dirname + '/../logs/error.log', level: 'error', eol: "\n" }));
-    logger.exceptions.handle(new winston.transports.File({ 
-        filename: __dirname + '/../logs/exceptions.log',
-        eol: "\n"
-    }));
     logger.exitOnError = false;
 }
 else {
+    if (file_logging === undefined) {
+        file_logging = true;
+    }
+
     http_server = http_base.createServer(app);
 
     // Define cors request for dev
     app.use(cors({ credentials: true, origin: 'http://localhost:3000', allowedHeaders: "*", exposedHeaders: "*" }));
     app.options('*', cors({ credentials: true, origin: 'http://localhost:3000' }));
+}
+
+if (file_logging) {
+    // Activate file logger
+    try {
+        mkdirSync(__dirname + '/../logs');
+    } catch (e) { }
+
+    logger.add(new winston.transports.File({ 
+        filename: __dirname + '/../logs/info.log', 
+        level: 'info', 
+        eol: "\n", 
+        format: FORMAT_FILE 
+    }));
+    logger.add(new winston.transports.File({ 
+        filename: __dirname + '/../logs/warn.log', 
+        level: 'warn', 
+        eol: "\n", 
+        format: FORMAT_FILE 
+    }));
+    logger.add(new winston.transports.File({ 
+        filename: __dirname + '/../logs/error.log', 
+        level: 'error', 
+        eol: "\n", 
+        format: FORMAT_FILE 
+    }));
+    logger.exceptions.handle(new winston.transports.File({ 
+        filename: __dirname + '/../logs/exceptions.log',
+        eol: "\n",
+        format: FORMAT_FILE
+    }));
 }
 
 const io = socket_io(http_server);
