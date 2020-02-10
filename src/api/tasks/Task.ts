@@ -62,17 +62,6 @@ export function isValidTaskType(type: string) : type is TaskType {
     return type === "tweet" || type === "mute" || type === "block" || type === "fav" || type === "dm";
 }
 
-function getFormattedDate() {
-    const now = new Date;
-    const [month, day] = [
-        String(now.getMonth() + 1).padStart(2, "0"),
-        String(now.getDate()).padStart(2, "0")
-    ];
-    const final_date = `${now.getFullYear()}-${month}-${day} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-
-    return final_date;
-}
-
 export default class Task {
     // @ts-ignore
     protected static current_id = 1n;
@@ -183,7 +172,7 @@ export default class Task {
         Task.current_id++;
         this.id = c;
         
-        logger.info(`${getFormattedDate()}> Creation of task #${this.id}, type ${type} for user @${user.screen_name} (${items_ids.length} elements)`);
+        logger.info(`Creation of task #${this.id}, type ${type} for user @${user.screen_name} (${items_ids.length} elements)`);
 
         this.last = {
             id: String(this.id),
@@ -276,7 +265,7 @@ export default class Task {
             computed_stats += ` (Remaining ${this.remaining})`;
         }
 
-        logger.info(`${getFormattedDate()}> Task #${this.id} of type ${this.type} from @${this.user.screen_name} has ended. Taken ${this.timer?.elapsed}s. ${computed_stats}`);
+        logger.info(`Task #${this.id} of type ${this.type} from @${this.user.screen_name} has ended. Taken ${this.timer?.elapsed}s. ${computed_stats}`);
         this.timer = undefined;
 
         if (this.has_twitter_errors_encountered) {
