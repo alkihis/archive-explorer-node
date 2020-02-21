@@ -9,6 +9,7 @@ import bodyParser from 'body-parser';
 import logger from '../logger';
 import cookieParser from 'cookie-parser';
 import jwt from './jwt';
+import ToolsRouter from './tools';
 
 const route = Router();
 
@@ -51,6 +52,7 @@ route.use(mongoSanitize({
 route.use('/tasks', task_route);
 route.use('/users', users_route);
 route.use('/batch', batch_route);
+route.use('/tools', ToolsRouter);
 route.get('/deleted_count.json', (_, res) => {
     res.json({ count: TweetCounter.count });
 });

@@ -3,6 +3,8 @@ import logger from "./logger";
 
 export const VERSION = "1.5.5";
 export const CONFIG_FILE = JSON.parse(readFileSync(__dirname + "/../settings.json", "utf-8"));
+export const CLASSIC_ARCHIVE_PATH = __dirname + "/../static/classic_archive.zip";
+
 export const TweetCounter = new class {
   protected count_file: { deleted: number };
   protected filename = __dirname + "/../misc/deleted_count.json";
