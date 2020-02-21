@@ -25,6 +25,7 @@ route.get('/', (req, res) => {
 
             try {
                 const resp = await twi.get('account/verify_credentials');
+                delete resp._headers;
                 res.json({ user: sanitizeMongoObj(u), twitter: resp });
             } catch (e) {
                 sendTwitterError(e, res);
