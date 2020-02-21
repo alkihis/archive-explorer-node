@@ -64,9 +64,11 @@ route.all('/', (_, res) => {
 // Catch JWT erros
 // Can't be used in router, must be declared in top-level
 export function apiErrors(err: any, _: express.Request, res: express.Response, next: Function) {
-    logger.debug("Token identification error: " + err.name);
+    logger.debug("An error occurred: " + err.name);
+    logger.verbose(err.stack);
 
     if (err.name === 'UnauthorizedError') {
+        logger.debug("Token identification error: " + err.name);
         sendError(AEError.invalid_token, res);
     }
     else {

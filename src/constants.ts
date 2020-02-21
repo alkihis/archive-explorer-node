@@ -1,9 +1,10 @@
 import { readFileSync, writeFileSync } from "fs";
 import logger from "./logger";
+import path from 'path';
 
-export const VERSION = "1.5.5";
+export const VERSION = "1.6.0";
 export const CONFIG_FILE = JSON.parse(readFileSync(__dirname + "/../settings.json", "utf-8"));
-export const CLASSIC_ARCHIVE_PATH = __dirname + "/../static/classic_archive.zip";
+export const CLASSIC_ARCHIVE_PATH = path.resolve(__dirname + "/../static/classic_archive.zip");
 
 export const TweetCounter = new class {
   protected count_file: { deleted: number };

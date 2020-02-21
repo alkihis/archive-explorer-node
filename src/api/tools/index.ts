@@ -3,6 +3,6 @@ import BaseArchiveRouter from './archive';
 
 const ToolsRouter = Router();
 
-ToolsRouter.use('/archive', BaseArchiveRouter);
+ToolsRouter.use('/archive.json', BaseArchiveRouter);
 
 export default ToolsRouter;
