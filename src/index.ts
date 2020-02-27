@@ -12,7 +12,7 @@ import cors from 'cors';
 import { COLLECTIONS } from './models';
 import { readFileSync, mkdirSync } from 'fs';
 import winston from 'winston';
-import { purgeCollections, purgePartial, getCompleteUserFromTwitterScreenName, createTwitterObjectFromUser } from './helpers';
+import { purgeCollections, purgePartial, getCompleteUserFromTwitterScreenName } from './helpers';
 import Task, { isValidTaskType } from './api/tasks/Task';
 import StaticServer from './static_server';
 import CliHelper from './cli';
