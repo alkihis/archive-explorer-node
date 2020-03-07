@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "fs";
 import logger from "./logger";
 import path from 'path';
 
-export const VERSION = "1.7.0";
+export const VERSION = "1.7.2";
 export const CONFIG_FILE = JSON.parse(readFileSync(__dirname + "/../settings.json", "utf-8"));
 export const CLASSIC_ARCHIVE_PATH = path.resolve(__dirname + "/../static/classic_archive.zip");
 
