@@ -28,11 +28,12 @@ commander
     .option('-p, --port <port>', 'Server port', Number, 3128)
     .option('-m, --mongo-port <port>', 'Mongo server port', Number, 3281)
     .option('-p, --purge', 'Purge all mongo collection, then quit')
+    .option('--prod')
     .option('--file-logging')
     .option('-l, --log-level [logLevel]', 'Log level [debug|silly|verbose|info|warn|error]', /^(debug|silly|verbose|info|warn|error)$/, 'info')
 .parse(process.argv);
 
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' || commander.prod) {
     IS_DEV_MODE = false;
 }
 
