@@ -92,6 +92,12 @@ You can ask for help with `--help`.
 ## Deploy
 
 By default, server will emit to port 443 (HTTPS).
-You just need to specify `--prod` argument to `build/index.js`.
+You just need to specify `NODE_ENV=production` env variable to `build/index.js`.
+
+```bash
+# You may need to be sudo to emit to port 443. 
+# Otherwise, start in dev mode and use Nginx with reverse proxy.
+NODE_ENV=production node build/index.js
+```
 
 Certificates should be in directory mentionned in settings.json's `https_key_directory`. It assume you will use Let's Encrypt.

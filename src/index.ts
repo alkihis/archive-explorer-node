@@ -28,10 +28,13 @@ commander
     .option('-p, --port <port>', 'Server port', Number, 3128)
     .option('-m, --mongo-port <port>', 'Mongo server port', Number, 3281)
     .option('-p, --purge', 'Purge all mongo collection, then quit')
-    .option('-d, --prod', 'Production mode (activate HTTPS, file logging)')
     .option('--file-logging')
     .option('-l, --log-level [logLevel]', 'Log level [debug|silly|verbose|info|warn|error]', /^(debug|silly|verbose|info|warn|error)$/, 'info')
 .parse(process.argv);
+
+if (process.env.NODE_ENV === 'production') {
+    IS_DEV_MODE = false;
+}
 
 if (commander.logLevel) {
     logger.level = commander.logLevel;
@@ -43,10 +46,11 @@ let redirector: express.Express;
 let http_server: http_base.Server | https_base.Server;
 let file_logging = commander.fileLogging;
 
-if (commander.prod) {
+if (!IS_DEV_MODE) {
+    console.log("Starting with prod mode.");
+
     file_logging = true;
 
-    IS_DEV_MODE = false;
     const SERVER_HTTPS_KEYS = CONFIG_FILE.https_key_directory;
     const credentials = {
         key: readFileSync(SERVER_HTTPS_KEYS + 'privkey.pem', 'utf8'),
@@ -60,6 +64,8 @@ if (commander.prod) {
     logger.exitOnError = false;
 }
 else {
+    console.log("Starting with dev mode.");
+    
     if (file_logging === undefined) {
         file_logging = true;
     }

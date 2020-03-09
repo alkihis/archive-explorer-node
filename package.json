@@ -19,6 +19,7 @@
     "@types/express-jwt": "0.0.42",
     "@types/jsonwebtoken": "^8.3.5",
     "@types/mongoose": "^5.5.38",
+    "@types/node": "^13.9.0",
     "@types/socket.io": "^2.1.4",
     "@types/spdy": "^3.4.4",
     "@types/uuid": "^3.4.6",
