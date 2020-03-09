@@ -73,8 +73,8 @@ else {
     http_server = http_base.createServer(app);
 
     // Define cors request for dev
-    app.use(cors({ credentials: true, origin: 'http://localhost:3000', allowedHeaders: "*", exposedHeaders: "*" }));
-    app.options('*', cors({ credentials: true, origin: 'http://localhost:3000' }));
+    app.use(cors({ credentials: true, origin: '*', allowedHeaders: "*", exposedHeaders: "*" }));
+    app.options('*', cors({ credentials: true, origin: '*' }));
 }
 
 if (file_logging) {
