@@ -105,9 +105,10 @@ export default class WorkerTaskMaker {
                 fn = user.get.bind(user);
         }
 
-        this.task_maker = id => {
+        this.task_maker = async id => {
             const { endpoint, parameters } = starter.request(id);
-            return fn(endpoint, parameters);
+            const res = await fn(endpoint, parameters);
+            return res;
         };
     }
 

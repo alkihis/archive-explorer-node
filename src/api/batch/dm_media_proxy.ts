@@ -59,7 +59,7 @@ async function getImageFromUrl(url: string, req: Request, res: Response) {
 route.get('/', (req, res) => {
     // Download a single image from Twitter
     if (req.user && req.query && req.query.url) {
-        const url: string = req.query.url;
+        const url: string = req.query.url as string;
 
         // Get URL from Twitter
         getImageFromUrl(url, req, res).catch(e => {

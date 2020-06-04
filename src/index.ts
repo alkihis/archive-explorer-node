@@ -42,6 +42,8 @@ if (commander.logLevel) {
 }
 
 const app = express();
+http_base.globalAgent.maxSockets = Infinity;
+https_base.globalAgent.maxSockets = Infinity;
 
 let redirector: express.Express;
 let http_server: http_base.Server | https_base.Server;
