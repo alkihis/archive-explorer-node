@@ -5,7 +5,6 @@ import logger, { FORMAT_FILE } from './logger';
 import APIIndex, { apiErrors as APIErrors } from './api/index';
 import socket_io from 'socket.io';
 import http_base from 'http';
-import https_base from 'https';
 import { startIo } from './api/tasks/task_server';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -43,27 +42,13 @@ if (commander.logLevel) {
 
 const app = express();
 http_base.globalAgent.maxSockets = Infinity;
-https_base.globalAgent.maxSockets = Infinity;
 
-let redirector: express.Express;
-let http_server: http_base.Server | https_base.Server;
+let http_server: http_base.Server;
 let file_logging = commander.fileLogging;
+http_server = http_base.createServer(app);
 
 if (!IS_DEV_MODE) {
     console.log("Starting with prod mode.");
-
-    file_logging = true;
-
-    const SERVER_HTTPS_KEYS = CONFIG_FILE.https_key_directory;
-    const credentials = {
-        key: readFileSync(SERVER_HTTPS_KEYS + 'privkey.pem', 'utf8'),
-        cert: readFileSync(SERVER_HTTPS_KEYS + 'cert.pem', 'utf8'),
-        ca: readFileSync(SERVER_HTTPS_KEYS + 'chain.pem', 'utf8')
-    };
-
-    http_server = https_base.createServer(credentials, app); 
-    redirector = express();
-    commander.port = 443;
     logger.exitOnError = false;
 }
 else {
@@ -72,8 +57,6 @@ else {
     if (file_logging === undefined) {
         file_logging = true;
     }
-
-    http_server = http_base.createServer(app);
 
     // Define cors request for dev
     app.use(cors({ credentials: true, origin: '*', allowedHeaders: "*", exposedHeaders: "*" }));
@@ -164,16 +147,6 @@ db.once('open', function() {
         logger.info(`Archive Explorer Server ${VERSION} is listening on port ${commander.port}`);
         startCli();
     });
-
-    if (commander.prod) {
-        // set up a route to redirect http to https
-        redirector.get('*', (req, res) => {  
-            res.redirect('https://' + req.headers.host + req.url);
-        });
-
-        // have it listen on 80
-        redirector.listen(80);
-    }
     
     startIo();
 });
