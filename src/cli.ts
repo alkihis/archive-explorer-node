@@ -1,153 +1,198 @@
-import logger from "./logger";
-import readline from 'readline';
-import { TweetCounter } from "./constants";
+import CliHelper from 'interactive-cli-helper';
+import mongoose from 'mongoose';
+import Task, { isValidTaskType } from './api/tasks/Task';
+import { COLLECTIONS } from './models';
+import { purgePartial, getCompleteUserFromTwitterScreenName } from './helpers';
+import { TweetCounter } from './constants';
 
+export const CliSettings = {
+    db_ok: false
+};
 
-type CliValidator = (rest: string, regex_matches: RegExpMatchArray | null) => boolean | Promise<boolean>; 
-type CliExecutorFunction = (rest: string, regex_matches: RegExpMatchArray | null, validator_state?: boolean) => any;
-type CliExecutor = CliExecutorFunction | string | object;
+export function startCli() {
+    const db = mongoose.connection;
 
-
-export class CliListener {
-    protected listeners: Map<string | RegExp, CliListener> = new Map;
-
-    constructor(
-        protected executor: CliExecutor,
-        protected validate_before?: CliValidator
-    ) { }
-
-    /**
-     * Add a new "sub-listener" (a listener that execute if the current `CliListener` is being executed).
-     *  
-     * Return the newly created listener, which where you can create another sub-listeners.
-     * 
-     * @param match_on The thing(s) that the new listener should match to.
-     * 
-     * @param executor The function that should be executed if the new listener is matched, 
-     * and any of its sub-listener has matched. If the returned thing is static, you can directly specify it (`string` or `object`).
-     * You can return a `Promise`, the CLI instance will wait its finish before giving back the control !
-     * 
-     * @param validate_before If the new listener (and all its sub-listeners) need to check a constraint, you can specify
-     * it here. The function must return a `boolean` or a `Promise<boolean>`.
-     * 
-     * If the `boolean` is `true`, continue the execution normally (sub-listener then executor if none match).
-     * 
-     * If the `boolean` is `false`, the executor only will be called with its `validator_state` (third) parameter to `false`.
-     */
-    addSubListener(match_on: string | RegExp | Array<string | RegExp>, executor: CliExecutor, validate_before?: CliValidator) {
-        const new_one = new CliListener(executor, validate_before);
-
-        if (Array.isArray(match_on)) {
-            for (const e of match_on) {
-                this.listeners.set(e, new_one);
-            }
-        }
-        else {
-            this.listeners.set(match_on, new_one);
-        }
-
-        return new_one;
+    function printTask(task: Task) {
+        return `@${task.owner_screen_name} [${task.type} #${task.id}]: ${task.current_progression.remaining}/${task.current_progression.failed}/${task.current_progression.total} [${task.worker_count} threads]`;
     }
 
-    /**
-     * Try to match a sub-listener. 
-     * If any sub-listener matches, then execute the current executor.
-     * 
-     * @param rest Rest of the string, after the things that have been matched.
-     * @param matches Regular expression matches array. `null` if the thing that have matched is a string.
-     */
-    async match(rest: string, matches: RegExpMatchArray | null) : Promise<any> {
-        let validator_state: boolean | undefined = undefined;
+    const cli = new CliHelper({
+        onNoMatch: "Command not recognized.",
+        suggestions: true
+    });
 
-        if (this.validate_before) {
-            validator_state = await this.validate_before(rest, matches); 
-        }
+    const collection = cli.command(
+        'coll',
+        (_, __, validator) => validator ? "Available commands for coll: list, drop" : "Can't access collections: Database is not ready.",
+        { onValidateBefore: () => CliSettings.db_ok }
+    );
 
-        if (validator_state !== false) {
-            for (const matcher of this.listeners.keys()) {
-                if (typeof matcher === 'string') {
-                    if (rest.startsWith(matcher)) {
-                        return this.listeners.get(matcher)!.match(rest.slice(matcher.length).trimLeft(), null);
+    // Drop a collection
+    collection.command(
+        /^drop ?(.+)?/,
+        (_, __, matches) => {
+            if (matches && matches[1]) {
+                const coll = matches[1].split(/\s/g) as (keyof typeof COLLECTIONS)[];
+                const to_delete = coll.filter(e => e in COLLECTIONS);
+
+                if (to_delete.length) {
+                    const colls: { [name: string]: any } = {};
+
+                    for (const name of to_delete) {
+                        colls[name] = COLLECTIONS[name];
                     }
+
+                    return purgePartial(colls, db).then(() => "Purge completed.");
                 }
                 else {
-                    const matches = rest.match(matcher);
-    
-                    if (matches) {
-                        return this.listeners.get(matcher)!.match(rest.replace(matcher, '').trimLeft(), matches);
-                    }
+                    return `Collection(s) ${coll.join(', ')} don't exist.`;
                 }
+            }
+            else {
+                return `Usage: coll drop <collectionName>`;
             }
         }
+    );
+    // List all the collections
+    collection.command(
+        'list',
+        `Available collections are: ${Object.keys(COLLECTIONS).join(', ')}`
+    );
 
-        if (typeof this.executor === 'function')
-            return this.executor(rest, matches, validator_state);
-        return this.executor;
-    }
-}
+    // Exit the server
+    cli.command('exit', () => {
+        console.log("Goodbye.")
+        TweetCounter.sync();
+        process.exit(0);
+    });
 
-export default class CliHelper extends CliListener {
-    /**
-     * Build a new instance of `CliHelper`. 
-     * 
-     * Add keywords/patterns you want to catch with `.addSubListener()`.
-     * 
-     * @param no_match_executor The function that will be called if none of the defined sub-listeners matched.
-     * If the returned value is static, you can specify a static `string` or `object`.
-     */
-    constructor(no_match_executor: CliExecutor) {
-        super(no_match_executor);
-    }
+    // -----------------
+    // | TASK LISTENER |
+    // -----------------
+    // Task listener: get info about running task, run a new task...
+    const task_listener = cli.command(
+        'task',
+        () => `There are ${Task.count} running tasks. Available commands: list, create, stop`
+    );
 
-    /**
-     * Starts the listening of `stdin`.
-     * 
-     * Before that, please define the keywords/patterns 
-     * you want to listen to with `.addSubListener()`.
-     */
-    listen() {
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-            prompt: '> '
-        });
+    // ------------
+    // INFOS / LIST
+    // Get info about all tasks
+    const list_task_listener = task_listener.command(
+        'list',
+        () => `Running tasks (${Task.count}).\n${
+            [...Task.all()]
+                .map(printTask)
+                .join('\n')
+            }`
+    );
+    // List all tasks from user
+    list_task_listener.command(
+        /^@(.+)/,
+        async (_, __, matches) => {
+            if (matches && matches[1]) {
+                const user_sn = matches[1];
+                const user_object = await getCompleteUserFromTwitterScreenName(user_sn);
 
-        rl.on('line', async line => {
-            if (!line) {
-                rl.prompt();
-                return;
-            }
-
-            let returned: any;
-            try {
-                returned = await this.match(line.trim(), null);
-            } catch (e) {
-                if (e instanceof Error) {
-                    returned = e;
+                if (user_object) {
+                    return [...Task.tasksOf(user_object.user_id)].map(printTask).join('\n');
                 }
-                else {
-                    returned = new Error(e);
+                return `User ${user_sn} does not exists.`;
+            }
+        }
+    );
+    // List a task by ID
+    list_task_listener.command(
+        /^\d+$/,
+        rest => {
+            const id = rest.trim();
+            if (Task.exists(id)) {
+                return printTask(Task.get(id)!);
+            }
+            return "This task does not exists.";
+        }
+    );
+
+    // ----------
+    // STOP TASKS
+    const task_stop_listener = task_listener.command(
+        'stop',
+        rest => {
+            Task.get(rest.trim())?.cancel();
+            return "Task stopped.";
+        }
+    );
+    // Stop all tasks
+    task_stop_listener.command(
+        'all',
+        () => {
+            for (const task of Task.all()) {
+                task.cancel();
+            }
+
+            return `All tasks has been stopped.`;
+        }
+    );
+    // Stop all tasks from user
+    task_stop_listener.command(
+        /@(.+)/,
+        async (_, __, matches) => {
+            if (matches && matches[1]) {
+                const user_sn = matches[1];
+                const user_object = await getCompleteUserFromTwitterScreenName(user_sn);
+
+                if (user_object) {
+                    for (const task of Task.tasksOf(user_object.user_id)) {
+                        task.cancel();
+                    }
                 }
+                return `Tasks of ${user_sn} has been stopped.`;
+            }
+        }
+    );
+
+    // ------------
+    // CREATE TASKS
+    task_listener.command(
+        /create @(\S+)/,
+        async (rest, _, matches) => {
+            if (!matches || !matches[1]) {
+                return "User not found.";
             }
 
-            if (typeof returned === 'string') {
-                console.log("cli: " + returned);
-            }
-            else if (returned instanceof Error) {
-                logger.warn(`Error encountered in CLI: ${returned.message} (${returned.stack})`);
-            }
-            else if (typeof returned === 'object') {
-                console.log("cli:", returned);
+            // User to create with
+            const user_object = await getCompleteUserFromTwitterScreenName(matches[1]);
+            if (!user_object) {
+                return "User does not exists.";
             }
 
-            // Reprompt for user input
-            rl.prompt();
-        }).on('close', () => {
-            console.log('Goodbye.');
-            TweetCounter.sync();
-            process.exit(0);
-        });
+            const [type, ids] = rest.split(' ', 2);
 
-        rl.prompt();
-    }
+            if (!type) {
+                return "Task type is required.";
+            }
+            if (!ids) {
+                return "IDs are required.";
+            }
+
+            if (!isValidTaskType(type)) {
+                return "Invalid task type.";
+            }
+
+            const spaced = ids.split(' ').filter(e => e).map(e => e.split(',').filter(e => e));
+            const all_ids = [...new Set(Array<string>().concat(...spaced))];
+
+            // Create the task
+            const task = new Task(all_ids, {
+                oauth_token: user_object.oauth_token,
+                oauth_token_secret: user_object.oauth_token_secret,
+                user_id: user_object.user_id,
+                screen_name: user_object.twitter_screen_name
+            }, type);
+
+            return `Task #${task.id} created for user @${user_object.twitter_screen_name}.`;
+        }
+    );
+
+    cli.listen();
 }
