@@ -14,6 +14,7 @@ import { COLLECTIONS } from './models';
 import { purgeCollections } from './helpers';
 import StaticServer from './static_server';
 import { CliSettings, startCli } from './cli';
+import { inspect } from 'util';
 
 // archive-explorer-server main file
 // Meant to serve archive-explorer website, 
@@ -148,3 +149,7 @@ db.once('open', function() {
     startIo();
 });
 
+process.on('unhandledRejection', reason => {
+    logger.error('Unhandled rejection :(');
+    logger.error(inspect(reason));
+});
