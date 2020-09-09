@@ -251,8 +251,10 @@ export function suppressUselessTweetProperties(tweet: Status) {
     delete tweet.contributors;
     delete tweet.coordinates;
     delete tweet.current_user_retweet;
+    // @ts-expect-error
     delete tweet.favorited;
     delete tweet.place;
+    // @ts-expect-error
     delete tweet.retweeted;
     delete tweet.scopes;
     delete tweet.withheld_copyright;
@@ -272,15 +274,20 @@ export function suppressUselessTweetProperties(tweet: Status) {
 }
 
 export function suppressUselessTUserProperties(user: FullUser) {
+    // @ts-expect-error
     delete user.entities;
+    // @ts-expect-error
     delete user.listed_count;
     delete user.status;
     delete user.withheld_in_countries;
     delete user.withheld_scope;
+    // @ts-expect-error
     delete user.statuses_count;
     // @ts-ignore
     delete user.follow_request_sent;
+    // @ts-expect-error
     delete user.default_profile_image;
+    // @ts-expect-error
     delete user.default_profile;
     // @ts-ignore
     delete user.profile_background_image_url;
