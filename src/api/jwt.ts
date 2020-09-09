@@ -4,6 +4,7 @@ import { SECRET_PUBLIC_KEY } from '../constants';
 import logger from '../logger';
 
 export default jwt({ 
+    algorithms: ['RS256'],
     getToken: function fromHeaderOrQuerystring(req) {
         if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
             return req.headers.authorization.split(' ')[1];
