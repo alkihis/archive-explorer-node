@@ -33,7 +33,7 @@
     "interactive-cli-helper": "^2.0.3",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.10.3",
-    "socket.io": "^2.3.0",
+    "socket.io": "^2.4.0",
     "timerize": "^1.0.3",
     "twitter-d": "^0.4.0",
     "twitter-lite": "^0.9.4",
