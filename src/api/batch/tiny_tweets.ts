@@ -32,7 +32,7 @@ route.post('/', (req, res) => {
 
     // Get tweets from DB or/and Twitter
     (async () => {
-      const existings = await batchTweets(ids);
+      const existings = await batchTweets(ids) as any as Status[];
 
       const ids_existings = new Set(existings.map(e => e.id_str));
 
@@ -59,7 +59,7 @@ route.post('/', (req, res) => {
         }
 
         // Create Twitter object with credentials
-        const user = new Twitter({ 
+        const user = new Twitter({
           consumer_key: CONSUMER_KEY,
           consumer_secret: CONSUMER_SECRET,
           access_token_key: bdd_user.oauth_token,
@@ -67,10 +67,10 @@ route.post('/', (req, res) => {
         });
 
         // Batch tweets using lookup endpoint (100 max)
-        const twitter_tweets = await user.post('statuses/lookup', { 
-          id: to_retrieve.join(','), 
-          include_entities: true, 
-          tweet_mode: "extended" 
+        const twitter_tweets = await user.post('statuses/lookup', {
+          id: to_retrieve.join(','),
+          include_entities: true,
+          tweet_mode: "extended"
         })
           // Otherwise, send Twitter error
           .catch(e => {

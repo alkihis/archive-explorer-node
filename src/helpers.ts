@@ -1,4 +1,4 @@
-import { UserModel, TokenModel, IUser, TweetModel, ITweet, TwitterUserModel, ITwitterUser } from "./models";
+import { UserModel, TokenModel, IUser, TweetModel, ITweet, TwitterUserModel, ITwitterUser, IToken } from "./models";
 import { SECRET_PRIVATE_KEY, SECRET_PASSPHRASE, SECRET_PUBLIC_KEY } from "./constants";
 import JsonWebToken from 'jsonwebtoken';
 import TwitterLite from "./twitter_lite_clone/twitter_lite";
@@ -20,40 +20,41 @@ export function methodNotAllowed(allow: string | string[]) {
 export function sanitizeMongoObj<T extends Mongoose.Document>(data: T) : any {
     try {
         const original_clean = 'toJSON' in data ? data.toJSON() : data;
-    
+
         for (const prop in original_clean) {
             if (prop.startsWith('_')) {
+                // @ts-ignore
                 delete original_clean[prop];
             }
         }
-    
+
         return original_clean;
     } catch {}
 
     return data;
 }
 
-export function getTokenInstanceFromString(token: string) {
+export function getTokenInstanceFromString(token: string) : Promise<IToken> {
     return TokenModel.findOne({ token });
 }
 
-export function getTokensFromUser(user_id: string) {
+export function getTokensFromUser(user_id: string) : Promise<IToken[]> {
     return TokenModel.find({ user_id });
 }
 
-export function getCompleteUserFromId(user_id: string) {
+export function getCompleteUserFromId(user_id: string) : Promise<IUser> {
     return UserModel.findOne({ user_id });
 }
 
-export function getCompleteUserFromTwitterId(twitter_id: string) {
+export function getCompleteUserFromTwitterId(twitter_id: string) : Promise<IUser> {
     return UserModel.findOne({ twitter_id });
 }
 
-export function getCompleteUserFromTwitterScreenName(twitter_screen_name: string) {
+export function getCompleteUserFromTwitterScreenName(twitter_screen_name: string) : Promise<IUser> {
     return UserModel.findOne({ twitter_screen_name: { $regex: "^" + twitter_screen_name + "$", $options: "i" }});
 }
 
-export function batchTweets(ids: string[]) {
+export function batchTweets(ids: string[]) : Promise<ITweet[]> {
     return TweetModel.find({ id_str: { $in: ids } })
         .then((statuses: ITweet[]) => {
             const current_date_minus = new Date;
@@ -76,14 +77,14 @@ export function batchUsers(ids: string[], as_screen_names = false) {
     let user_prom: Mongoose.DocumentQuery<ITwitterUser[], ITwitterUser, {}>;
     if (as_screen_names) {
         user_prom = TwitterUserModel.find({ screen_name: {
-            $regex: new RegExp('(^' + ids.join('$)|(^') + '$)'), 
+            $regex: new RegExp('(^' + ids.join('$)|(^') + '$)'),
             $options: "i"
         }});
     }
     else {
         user_prom = TwitterUserModel.find({ id_str: { $in: ids } });
     }
-    
+
     return user_prom
         .then(users => {
             const current_date_minus = new Date;
@@ -158,9 +159,9 @@ export function isTokenInvalid(token: string, req?: express.Request, full_payloa
                 if (full_payload && req) {
                     const exp = new Date(Number(full_payload.exp) * 1000);
                     const now = new Date;
-                    
+
                     // If token is not expired
-                    if (exp.getTime() >= now.getTime()) {    
+                    if (exp.getTime() >= now.getTime()) {
                         now.setDate(now.getDate() + 14);
 
                         // Token expires in less than 14 days
@@ -198,7 +199,7 @@ export async function checkToken(token: string) {
             resolve(data as any);
         });
     });
-    
+
     if (await isTokenInvalid(decoded.jti)) {
         return undefined;
     }
@@ -216,23 +217,23 @@ export function signToken(payload: TokenPayload, id: string) {
         JsonWebToken.sign(
             payload, // Données custom
             { key: SECRET_PRIVATE_KEY, passphrase: SECRET_PASSPHRASE }, // Clé RSA privée
-            { 
-                algorithm: 'RS256', 
+            {
+                algorithm: 'RS256',
                 expiresIn: "90d", // 3 months durability
-                issuer: "Archive Explorer Server 1", 
+                issuer: "Archive Explorer Server 1",
                 jwtid: id, // ID généré avec uuid
-            }, 
+            },
             (err, encoded) => { // Quand le token est généré (ou non), accepte/rejette la promesse
                 if (err) reject(err);
-                else resolve(encoded);
+                else resolve(encoded as string);
             }
         );
     }) as Promise<string>;
 }
 
 export function makeTokenFromUser(jti: string, user_id: string, screen_name: string, login_ip: string) {
-    return signToken({ 
-        user_id, 
+    return signToken({
+        user_id,
         screen_name,
         login_ip
     }, jti);
@@ -319,7 +320,7 @@ export function suppressUselessTUserProperties(user: FullUser) {
     delete user.translator_type;
 
     return user;
-} 
+}
 
 export function sendTwitterError(e: any, res: express.Response) {
     if (e.errors) {

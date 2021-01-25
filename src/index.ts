@@ -17,7 +17,7 @@ import { CliSettings, startCli } from './cli';
 import { inspect } from 'util';
 
 // archive-explorer-server main file
-// Meant to serve archive-explorer website, 
+// Meant to serve archive-explorer website,
 // and provide an API in order to delete tweets
 
 export let IS_DEV_MODE = true;
@@ -53,13 +53,14 @@ if (!IS_DEV_MODE) {
 }
 else {
     console.log("Starting with dev mode.");
-    
+
     if (file_logging === undefined) {
         file_logging = true;
     }
 
     // Define cors request for dev
     app.use(cors({ credentials: true, origin: '*', allowedHeaders: "*", exposedHeaders: "*" }));
+    // @ts-ignore
     app.options('*', cors({ credentials: true, origin: '*' }));
 }
 
@@ -69,25 +70,25 @@ if (file_logging) {
         mkdirSync(__dirname + '/../logs');
     } catch (e) { }
 
-    logger.add(new winston.transports.File({ 
-        filename: __dirname + '/../logs/info.log', 
-        level: 'info', 
-        eol: "\n", 
-        format: FORMAT_FILE 
+    logger.add(new winston.transports.File({
+        filename: __dirname + '/../logs/info.log',
+        level: 'info',
+        eol: "\n",
+        format: FORMAT_FILE
     }));
-    logger.add(new winston.transports.File({ 
-        filename: __dirname + '/../logs/warn.log', 
-        level: 'warn', 
-        eol: "\n", 
-        format: FORMAT_FILE 
+    logger.add(new winston.transports.File({
+        filename: __dirname + '/../logs/warn.log',
+        level: 'warn',
+        eol: "\n",
+        format: FORMAT_FILE
     }));
-    logger.add(new winston.transports.File({ 
-        filename: __dirname + '/../logs/error.log', 
-        level: 'error', 
-        eol: "\n", 
-        format: FORMAT_FILE 
+    logger.add(new winston.transports.File({
+        filename: __dirname + '/../logs/error.log',
+        level: 'error',
+        eol: "\n",
+        format: FORMAT_FILE
     }));
-    logger.exceptions.handle(new winston.transports.File({ 
+    logger.exceptions.handle(new winston.transports.File({
         filename: __dirname + '/../logs/exceptions.log',
         eol: "\n",
         format: FORMAT_FILE
@@ -130,22 +131,22 @@ db.once('open', function() {
     logger.debug("Serving API");
     app.use('/api', APIIndex);
     app.use('/api', APIErrors);
-    
+
     logger.debug("Serving static website");
     // File should be in build/
     app.use(StaticServer);
-    
+
     // 404 not found for all others pages
     app.use((_, res) => {
         res.status(404).send();
     });
-    
+
     // Use http, not app !
     http_server.listen(commander.port, () => {
         logger.info(`Archive Explorer Server ${VERSION} is listening on port ${commander.port}`);
         startCli();
     });
-    
+
     startIo();
 });
 
