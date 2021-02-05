@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getCompleteUserFromId, sanitizeMongoObj, methodNotAllowed } from "../../helpers";
 import logger from "../../logger";
 import AEError, { sendError } from "../../errors";
+import { CONFIG_FILE } from "../../constants";
 
 const route = Router();
 
@@ -12,7 +13,9 @@ route.get('/', (req, res) => {
     user
         .then(u => {
             if (u) {
-                res.json(sanitizeMongoObj(u));
+                const s_user = sanitizeMongoObj(u);
+                s_user.can_cloud = CONFIG_FILE.allowed_users_to_cloud.includes(u.user_id);
+                res.json(s_user);
             }
             else {
                 sendError(AEError.forbidden, res);

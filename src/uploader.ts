@@ -3,6 +3,8 @@ import { mkdirSync, promises as fs } from 'fs';
 import path from 'path';
 import { v4 as uuid } from 'uuid';
 
+// 512 * 200: 100MB par archive max
+export const MAX_ALLOWED_CHUNKS = 200;
 export const MAX_CLOUDED_ARCHIVES = 10;
 export const UPLOAD_PATH = __dirname + '/../uploads/';
 try {
@@ -33,9 +35,7 @@ export class UploadManager {
         const dirname = path.dirname(file.path);
         const newpath = path.normalize(dirname + '/' + name);
 
-        return fs.copyFile(file.path, newpath).then(() => {
-            file.path = newpath
-        });
+        return fs.copyFile(file.path, newpath);
     }
 }
 
@@ -46,6 +46,8 @@ export interface ChunkManifest {
     chunks: string[];
     name: string;
     info: any;
+    started_at: string;
+    last_update: string;
 }
 
 export class ChunkManager {
@@ -55,35 +57,77 @@ export class ChunkManager {
         return uuid();
     }
 
+    static async removeOutdatedManifests() {
+        const manifests = await fs.readdir(UPLOAD_PATH);
+        const threshold = new Date();
+        // Max life: 15 minutes
+        threshold.setMinutes(threshold.getMinutes() - 15);
+        const to_delete: [string, ChunkManifest][] = [];
+
+        for (const manifest of manifests) {
+            // Ignore non manifest files
+            if (!manifest.endsWith('.manifest')) {
+                continue;
+            }
+
+            const manifest_data: ChunkManifest = JSON.parse(await fs.readFile(UPLOAD_PATH + '/' + manifest, 'utf-8'));
+            const last_updated = new Date(manifest_data.last_update);
+
+            // If last update inferior to threshold time
+            if (last_updated.getTime() < threshold.getTime()) {
+                to_delete.push([manifest, manifest_data]);
+            }
+        }
+
+        return Promise.all(to_delete.map(async ([item, manifest]) => {
+            // Delete chunk attached to manifest
+            await this.deleteFromManifest(manifest);
+            // Delete manifest
+            await fs.unlink(UPLOAD_PATH + '/' + item).catch(e => {});
+        }));
+    }
+
+    protected static deleteFromManifest(manifest: ChunkManifest) {
+        return Promise.all(
+            manifest.chunks.map(e =>
+                fs
+                    .unlink(path.normalize(UPLOAD_PATH + '/' + e))
+                    .catch(d => {})
+            )
+        );
+    }
+
     async reconstructFile(manifest: ChunkManifest) {
         let i = 0;
         const indexed_chunks: [number, string][] = manifest.chunks.map(e => [this.getChunkIndex(e), e]);
         const sorted_chunks = indexed_chunks.sort((a, b) => {
             return a[0] - b[0];
         });
-        const final_path = path.normalize(UPLOAD_PATH + '/' + this.file_id + '.zip');
+        const filename = this.file_id + '.zip';
+        const final_path = path.normalize(UPLOAD_PATH + '/' + filename);
 
         for (const [chunk_index, chunk_name] of sorted_chunks) {
             if (chunk_index !== i) {
                 throw new RangeError('Index order does not match');
             }
 
+            const chunk_path = path.normalize(UPLOAD_PATH + '/' + chunk_name);
             // Append chunk to final file
-            await fs.appendFile(final_path, await fs.readFile(chunk_name));
+            await fs.appendFile(final_path, await fs.readFile(chunk_path));
 
             i++;
         }
 
         // Ok, file reconstructed
         // Remove every chunk + manifest
-        await Promise.all(manifest.chunks.map(e => fs.unlink(e).catch(d => {})));
+        await ChunkManager.deleteFromManifest(manifest);
         await fs.unlink(this.manifest_path).catch(e => {});
 
-        return final_path;
+        return filename;
     }
 
     getChunkPath(chunk_id: string) {
-        return path.normalize(UPLOAD_PATH + '/' + this.file_id + '__' + chunk_id + '.chunk');
+        return this.file_id + '__' + chunk_id + '.chunk';
     }
 
     getManifest() : Promise<ChunkManifest> {
@@ -91,6 +135,7 @@ export class ChunkManager {
     }
 
     saveManifest(manifest: ChunkManifest) {
+        manifest.last_update = new Date().toISOString();
         return fs.writeFile(this.manifest_path, JSON.stringify(manifest)).then(() => manifest);
     }
 
@@ -102,6 +147,8 @@ export class ChunkManager {
             chunks: [],
             name,
             info,
+            started_at: new Date().toISOString(),
+            last_update: '',
         });
     }
 
@@ -119,3 +166,8 @@ export class ChunkManager {
         return Number(chunk_name.split('.chunk')[0]);
     }
 }
+
+// Set timer to delete outdated manifests and chunks
+setInterval(() => {
+    ChunkManager.removeOutdatedManifests();
+}, 120 * 1000);

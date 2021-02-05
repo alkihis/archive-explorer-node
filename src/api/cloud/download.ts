@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { methodNotAllowed } from "../../helpers";
+import { deleteCloudedArchive, methodNotAllowed } from "../../helpers";
 import AEError, { sendError } from '../../errors';
 import logger from '../../logger';
 import { CloudedArchiveModel, ICloudedArchive } from '../../models';
@@ -63,9 +63,7 @@ DownloadArchiveCloud.delete('/destroy/:file_id', (req, res) => {
         }) as ICloudedArchive;
 
         if (file) {
-            // Delete related ZIP file then model
-            await fs.promises.unlink(file.path).catch(() => {});
-            await file.remove();
+            await deleteCloudedArchive(file);
         }
 
         res.send();

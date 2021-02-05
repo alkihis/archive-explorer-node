@@ -1,6 +1,6 @@
 import { Response, Router } from 'express';
 import { methodNotAllowed } from "../../helpers";
-import uploader, { ChunkManager, ChunkManifest, MAX_CLOUDED_ARCHIVES, UploadManager } from '../../uploader';
+import uploader, { ChunkManager, ChunkManifest, MAX_ALLOWED_CHUNKS, MAX_CLOUDED_ARCHIVES, UploadManager } from '../../uploader';
 import AEError, { sendError } from '../../errors';
 import logger from '../../logger';
 import { CloudedArchiveModel } from '../../models';
@@ -35,9 +35,19 @@ UploadArchiveCloud.post('/start.json', (req, res) => {
     }
 
     (async () => {
-        const existing_count = await CloudedArchiveModel.count({ user_id: req.user!.user_id }) as number;
+        const existing_count = await CloudedArchiveModel.countDocuments({ user_id: req.user!.user_id }) as number;
         if (existing_count >= MAX_CLOUDED_ARCHIVES) {
             return sendError(AEError.forbidden, res);
+        }
+
+        const existing_hash = await CloudedArchiveModel.countDocuments({
+            user_id: req.user!.user_id,
+            'info.hash': info.hash,
+        }) as number;
+        if (existing_hash) {
+            return res.json({
+                already_sent: true,
+            });
         }
 
         const manifest = await ChunkManager.registerManifest(size, filename, info);
@@ -59,11 +69,16 @@ UploadArchiveCloud.post('/chunk.json', uploader.single('chunk'), (req, res) => {
         UploadManager.cleanup(chunk);
     }
 
+    const allowed_users = CONFIG_FILE.allowed_users_to_cloud as string[];
+    if (!allowed_users.includes(req.user!.user_id)) {
+        return sendError(AEError.forbidden, res);
+    }
+
     const chunk = req.file;
     const file_id = req.body.file_id;
     const chunk_id = Number(req.body.chunk_id);
 
-    if (!file_id || !chunk_id || file_id.includes('/')) {
+    if (!file_id || isNaN(chunk_id) || file_id.includes('/')) {
         return errorAndCleanup(AEError.invalid_data, res);
     }
 
@@ -75,6 +90,10 @@ UploadArchiveCloud.post('/chunk.json', uploader.single('chunk'), (req, res) => {
             manifest = await manager.getManifest();
         } catch (e) {
             return sendError(AEError.inexistant, res);
+        }
+
+        if (manifest.chunks.length >= MAX_ALLOWED_CHUNKS) {
+            return sendError(AEError.too_many_chunks, res);
         }
 
         const chunk_path = manager.getChunkPath(chunk_id.toString());
@@ -108,14 +127,17 @@ UploadArchiveCloud.post('/chunk.json', uploader.single('chunk'), (req, res) => {
     })().catch(e => {
         sendError(AEError.server_error, res);
         logger.error("Server error", e);
-    });
-
-    UploadManager.cleanup(chunk);
+    }).finally(() => UploadManager.cleanup(chunk));
 });
 
 UploadArchiveCloud.all('/chunk.json', methodNotAllowed('POST'));
 
 UploadArchiveCloud.post('/terminate.json', (req, res) => {
+    const allowed_users = CONFIG_FILE.allowed_users_to_cloud as string[];
+    if (!allowed_users.includes(req.user!.user_id)) {
+        return sendError(AEError.forbidden, res);
+    }
+
     const file_id = req.body.file_id;
 
     if (!file_id || file_id.includes('/')) {
@@ -141,7 +163,7 @@ UploadArchiveCloud.post('/terminate.json', (req, res) => {
         const hash = await md5File(final_path);
 
         // Register file into mongodb
-        const filemodel = await CloudedArchiveModel.create({
+        await CloudedArchiveModel.create({
             file_id,
             user_id: req.user!.user_id,
             filename: manifest.name,
