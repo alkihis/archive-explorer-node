@@ -1,11 +1,12 @@
 import { Response, Router } from 'express';
 import { methodNotAllowed } from "../../helpers";
-import uploader, { ChunkManager, ChunkManifest, MAX_ALLOWED_CHUNKS, MAX_CLOUDED_ARCHIVES, UploadManager } from '../../uploader';
+import uploader, { ChunkManager, ChunkManifest, MAX_ALLOWED_CHUNKS, MAX_CLOUDED_ARCHIVES, UploadManager, UPLOAD_PATH } from '../../uploader';
 import AEError, { sendError } from '../../errors';
 import logger from '../../logger';
 import { CloudedArchiveModel } from '../../models';
 import md5File from 'md5-file';
 import { CONFIG_FILE } from '../../constants';
+import path from 'path';
 
 const UploadArchiveCloud = Router();
 
@@ -160,7 +161,7 @@ UploadArchiveCloud.post('/terminate.json', (req, res) => {
 
         // Reconstruct original file
         const final_path = await manager.reconstructFile(manifest);
-        const hash = await md5File(final_path);
+        const hash = await md5File(path.normalize(UPLOAD_PATH + '/' + final_path));
 
         // Register file into mongodb
         await CloudedArchiveModel.create({
