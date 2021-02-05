@@ -64,12 +64,7 @@ export class ChunkManager {
         threshold.setMinutes(threshold.getMinutes() - 15);
         const to_delete: [string, ChunkManifest][] = [];
 
-        for (const manifest of manifests) {
-            // Ignore non manifest files
-            if (!manifest.endsWith('.manifest')) {
-                continue;
-            }
-
+        for (const manifest of manifests.filter(m => m.endsWith('.manifest'))) {
             const manifest_data: ChunkManifest = JSON.parse(await fs.readFile(UPLOAD_PATH + '/' + manifest, 'utf-8'));
             const last_updated = new Date(manifest_data.last_update);
 
