@@ -4,6 +4,7 @@ import AEError, { sendError } from '../../errors';
 import logger from '../../logger';
 import { CloudedArchiveModel, ICloudedArchive } from '../../models';
 import * as fs from 'fs';
+import { UPLOAD_PATH } from "../../uploader";
 
 const DownloadArchiveCloud = Router();
 
@@ -21,7 +22,7 @@ DownloadArchiveCloud.get('/archive/:file_id', (req, res) => {
             return sendError(AEError.inexistant, res);
         }
 
-        const filepath = archive_info.path;
+        const filepath = UPLOAD_PATH + '/' + archive_info.path;
         const filename = archive_info.filename;
 
         res.setHeader('Content-Type', 'application/zip');
