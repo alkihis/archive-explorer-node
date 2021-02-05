@@ -41,6 +41,25 @@ const token_schema = new mongoose.Schema({
     last_use: Date
 });
 
+export interface ICloudedArchive extends mongoose.Document {
+    file_id: string,
+    user_id: string,
+    filename: string,
+    path: string,
+    hash: string,
+    date: Date,
+    info: any,
+}
+const clouded_archive_schema = new mongoose.Schema({
+    file_id: String,
+    user_id: String,
+    filename: String,
+    path: String,
+    hash: String,
+    date: Date,
+    info: Object,
+});
+
 export type ITweetPartial = mongoose.Document & Status;
 
 export interface ITweet extends ITweetPartial {
@@ -68,7 +87,9 @@ export const UserModel = mongoose.model<IUser>('UserModel', user_schema, 'ae_use
 
 export const TokenModel = mongoose.model<IToken>('TokenModel', token_schema, 'ae_token'); 
 
-export const TweetModel = mongoose.model<ITweet>('TweetModel', tweet_schema, 'ae_tweets'); 
+export const TweetModel = mongoose.model<ITweet>('TweetModel', tweet_schema, 'ae_tweets');
+
+export const CloudedArchiveModel = mongoose.model<ICloudedArchive>('CloudedArchiveModel', clouded_archive_schema, 'ae_archives');
 
 export const TwitterUserModel = mongoose.model<ITwitterUser>('TwitterUserModel', user_twitter_schema, 'ae_twitter_users'); 
 
@@ -76,5 +97,6 @@ export const COLLECTIONS = {
     'ae_user': UserModel,
     'ae_token': TokenModel,
     'ae_tweets': TweetModel,
-    'ae_twitter_users': TwitterUserModel
+    'ae_twitter_users': TwitterUserModel,
+    'ae_archives': CloudedArchiveModel,
 };
