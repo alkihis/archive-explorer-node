@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import Task, { isValidTaskType } from './api/tasks/Task';
 import { COLLECTIONS } from './models';
 import { purgePartial, getCompleteUserFromTwitterScreenName } from './helpers';
-import { TweetCounter } from './constants';
+import { reloadSettings, TweetCounter } from './constants';
 
 export const CliSettings = {
     db_ok: false
@@ -17,8 +17,13 @@ export function startCli() {
     }
 
     const cli = new CliHelper({
-        onNoMatch: "Command not recognized.",
+        onNoMatch: "Command not recognized. Available commands are: reload-settings, coll, exit, task.",
         suggestions: true
+    });
+
+    cli.command('reload-settings', () => {
+        reloadSettings();
+        return 'Settings reloaded.';
     });
 
     const collection = cli.command(

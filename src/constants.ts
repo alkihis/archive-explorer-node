@@ -2,9 +2,21 @@ import { readFileSync, writeFileSync } from "fs";
 import logger from "./logger";
 import path from 'path';
 
-export const VERSION = "1.7.2";
-export const CONFIG_FILE = JSON.parse(readFileSync(__dirname + "/../settings.json", "utf-8"));
+export const VERSION = "1.8.0";
+export const CONFIG_FILE: any = {}
 export const CLASSIC_ARCHIVE_PATH = path.resolve(__dirname + "/../static/classic_archive.zip");
+
+export function reloadSettings() {
+  const settings = JSON.parse(readFileSync(__dirname + "/../settings.json", "utf-8"));
+
+  for (const key in settings) {
+    if (settings.hasOwnProperty(key)) {
+      CONFIG_FILE[key] = settings[key];
+    }
+  }
+}
+
+reloadSettings();
 
 export const TweetCounter = new class {
   protected count_file: { deleted: number };
