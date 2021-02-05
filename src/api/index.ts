@@ -10,6 +10,7 @@ import logger from '../logger';
 import cookieParser from 'cookie-parser';
 import jwt from './jwt';
 import ToolsRouter from './tools';
+import CloudRouter from './cloud';
 
 const route = Router();
 
@@ -53,6 +54,7 @@ route.use('/tasks', task_route);
 route.use('/users', users_route);
 route.use('/batch', batch_route);
 route.use('/tools', ToolsRouter);
+route.use('/cloud', CloudRouter);
 route.get('/deleted_count.json', (_, res) => {
     res.json({ count: TweetCounter.count });
 });

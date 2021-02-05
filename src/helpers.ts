@@ -1,14 +1,16 @@
-import { UserModel, TokenModel, IUser, TweetModel, ITweet, TwitterUserModel, ITwitterUser, IToken } from "./models";
+import { UserModel, TokenModel, IUser, TweetModel, ITweet, TwitterUserModel, ITwitterUser, IToken, CloudedArchiveModel, ICloudedArchive } from "./models";
 import { SECRET_PRIVATE_KEY, SECRET_PASSPHRASE, SECRET_PUBLIC_KEY } from "./constants";
 import JsonWebToken from 'jsonwebtoken';
 import TwitterLite from "./twitter_lite_clone/twitter_lite";
 import { CONSUMER_KEY, CONSUMER_SECRET } from "./twitter_const";
-import express, { Request } from 'express';
+import express from 'express';
 import Mongoose from "mongoose";
 import AEError, { sendError } from "./errors";
 import { Status, FullUser } from "twitter-d";
 import { TokenPayload, JSONWebToken } from "./interfaces";
 import logger from "./logger";
+import * as fs from "fs";
+import { UPLOAD_PATH } from "./uploader";
 
 export function methodNotAllowed(allow: string | string[]) {
     return (_: any, res: express.Response) => {
@@ -344,6 +346,19 @@ export async function deleteUser(user_id: string) {
     await invalidateTokensFromUser(user_id);
     // Delete user
     await UserModel.deleteOne({ user_id });
+    // Delete clouded archives
+    await deleteEveryCloudedArchive(user_id);
+}
+
+export async function deleteEveryCloudedArchive(user_id: string) {
+    const archives = await CloudedArchiveModel.find({ user_id }) as ICloudedArchive[];
+    await Promise.all(archives.map(deleteCloudedArchive));
+}
+
+export async function deleteCloudedArchive(archive: ICloudedArchive) {
+    // Delete related ZIP file then model
+    await fs.promises.unlink(UPLOAD_PATH + '/' + archive.path).catch(() => {});
+    await archive.remove();
 }
 
 export async function changeSpecial(user_id: string, special = false) {

@@ -28,7 +28,7 @@ export function startCli() {
 
     const collection = cli.command(
         'coll',
-        (_, __, validator) => validator ? "Available commands for coll: list, drop" : "Can't access collections: Database is not ready.",
+        (_, __, ___, validator) => validator ? "Available commands for coll: list, drop" : "Can't access collections: Database is not ready.",
         { onValidateBefore: () => CliSettings.db_ok }
     );
 
