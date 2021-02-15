@@ -4,6 +4,7 @@ import Task, { isValidTaskType } from './api/tasks/Task';
 import { COLLECTIONS } from './models';
 import { purgePartial, getCompleteUserFromTwitterScreenName } from './helpers';
 import { reloadSettings, TweetCounter } from './constants';
+import { clearCache } from './static_server';
 
 export const CliSettings = {
     db_ok: false
@@ -24,6 +25,10 @@ export function startCli() {
     cli.command('reload-settings', () => {
         reloadSettings();
         return 'Settings reloaded.';
+    });
+
+    cli.command('reset-cache', () => {
+        clearCache();
     });
 
     const collection = cli.command(

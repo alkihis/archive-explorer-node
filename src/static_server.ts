@@ -6,7 +6,12 @@ import logger from "./logger";
 
 const router = Router();
 
-const CACHE_FOR_LANGS: any = {};
+let CACHE_FOR_LANGS: any = {};
+
+export function clearCache() {
+    CACHE_FOR_LANGS = {};
+}
+
 function serveHtmlMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
     const lang = req.acceptsLanguages('fr', 'fr_FR', 'fr_CA', 'en');
 
@@ -27,8 +32,8 @@ function serveHtmlMiddleware(req: express.Request, res: express.Response, next: 
                 if (err) {
                     reject(err);
                     return;
-                } 
-                
+                }
+
                 resolve(data.toString('utf-8'));
             });
         }) as Promise<string>;
@@ -38,14 +43,14 @@ function serveHtmlMiddleware(req: express.Request, res: express.Response, next: 
                 if (err) {
                     reject(err);
                     return;
-                } 
-                
+                }
+
                 resolve(data.toString('utf-8'));
             });
         }) as Promise<string>;
 
         const replacement_regex = new RegExp(`<meta name="replacement">(.+)<meta name="end-replacement">`, 's')
-        
+
         // Envoie un fichier remplacé
         Promise.all([original_string, replacement_string])
             .then(d => {
@@ -61,7 +66,7 @@ function serveHtmlMiddleware(req: express.Request, res: express.Response, next: 
             })
             .catch(err => next(err));
     }
-    else { 
+    else {
         // Aucune modification nécessaire
         res.sendFile(path.join(__dirname, "../static/www/index.html"));
     }
